@@ -39,11 +39,4 @@ class Prophet:
         result = y.copy()
         result[err_map] = 1 - result[err_map]
 
-        # Non-optimized code
-        # result = np.copy(y)
-        # for index, value in enumerate(y):
-        #     pred = np.random.uniform()
-        #     if self._err_prob > pred:
-        #         result[index] = int(not value)
-
         return result
