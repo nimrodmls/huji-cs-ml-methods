@@ -5,10 +5,12 @@ import helpers
 
 ### Expermintation functions
 
-def knn_experiment_plotting(k_value):
+def knn_experiment_plotting(k_value, distance_metric):
     train_dataset, train_classes = read_data('train.csv')
-    model = KNNClassifier(k_value, distance_metric='l2', train_dataset, train_classes)
-    helpers.plot_decision_boundaries(model, )
+    test_dataset, test_classes = read_data('test.csv')
+    model = KNNClassifier(k_value, distance_metric=distance_metric)
+    model.fit(train_dataset, train_classes)
+    helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'kNN - (k={k_value}, distance_metric={distance_metric})')
 
 def knn_experiment(k_combinations):
     train_dataset, train_classes = read_data('train.csv')
@@ -43,5 +45,8 @@ def read_data(filename):
 if __name__ == "__main__":
     np.random.seed(0) # Constant seed for reproducibility
 
-    knn_experiment([1, 10, 100, 1000, 3000])
+    #knn_experiment([1, 10, 100, 1000, 3000])
+    #knn_experiment_plotting(1, 'l2')
+    #knn_experiment_plotting(1, 'l1')
+    knn_experiment_plotting(3000, 'l2')
 
