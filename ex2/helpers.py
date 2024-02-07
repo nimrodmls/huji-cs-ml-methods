@@ -84,14 +84,17 @@ def plot_decision_boundaries(model, X, y, title='Decision Boundaries'):
     plt.show()
 
 
-def knn_examples(X_train, Y_train, X_test, Y_test):
+def knn_sample(X_train, Y_train, X_test, Y_test, k_value, distance_metric):
     """
+    This is a modified version of the given knn_example function.
+    (Receiving k_value & distance metric, returning the accuracy of the model)
+
     Notice the similarity to the decision tree demo above.
     This is the sklearn standard format for models.
     """
 
     # Initialize the KNNClassifier with k=5 and L2 distance metric
-    knn_classifier = KNNClassifier(k=5, distance_metric='l2')
+    knn_classifier = KNNClassifier(k=k_value, distance_metric=distance_metric)
 
     # Train the classifier
     knn_classifier.fit(X_train, Y_train)
@@ -101,6 +104,8 @@ def knn_examples(X_train, Y_train, X_test, Y_test):
 
     # Calculate the accuracy of the classifier
     accuracy = np.mean(y_pred == Y_test)
+
+    return accuracy
 
 
 def read_data_demo(filename='train.csv'):

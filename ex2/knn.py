@@ -39,11 +39,9 @@ class KNNClassifier:
         Returns:
         - (numpy array) of size (M,): Predicted class labels.
         """
-        # distances is a matrix where each row is of size k, containing the kNN distances.
-        # idx are the indices of the kNNs, within the training set X_train
-        distances, idx = self.index.search(X, self.k)
+        _, idx = self.knn_distance(X)
         # distances are sorted by increasing distance, as per the faiss documentation.
-        # we have no use for the distances at the moment
+        # we have no use for the distances at the moment, so we ignore them
 
         # Finding the most common class for each of the data points in the given set
         data_point_classes = []
@@ -55,10 +53,7 @@ class KNNClassifier:
             majority_class = u_values[np.argmax(np.bincount(indices))]
             data_point_classes.append(majority_class)
 
-        return np.array(data_point_classes)
-            
-            
-        
+        return np.array(data_point_classes)        
 
     def knn_distance(self, X):
         """
@@ -73,4 +68,7 @@ class KNNClassifier:
         - (numpy array) of size (M, k): Indices of kNNs.
         """
         X = X.astype(np.float32)
-	#### YOUR CODE GOES HERE ####
+	    # distances is a matrix where each row is of size k, containing the kNN distances.
+        # idx are the indices of the kNNs, within the training set X_train
+        return self.index.search(X, self.k)
+        

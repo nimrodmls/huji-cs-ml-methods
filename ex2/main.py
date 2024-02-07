@@ -1,4 +1,25 @@
+import numpy as np
+
 import helpers
+
+### Expermintation functions
+
+def knn_experiment(k_combinations):
+    train_dataset, train_classes = read_data('train.csv')
+    validation_dataset, validation_classes = read_data('validation.csv')
+    test_dataset, test_classes = read_data('test.csv')
+
+    # The distance metrics to be used
+    distance_metrics = ['l2', 'l1']
+
+    for k in k_combinations:
+        print(f'--- K: {k} ---')
+        for dist_metric in distance_metrics:
+            accuracy = helpers.knn_sample(
+                train_dataset, train_classes, test_dataset, test_classes, k, dist_metric)
+            print(f'K: {k}\t\tDistance Metric: {dist_metric}\tAccuracy: {accuracy}')
+
+### Utility functions
 
 def read_data(filename):
     """
@@ -14,8 +35,7 @@ def read_data(filename):
     return dataset, classes
 
 if __name__ == "__main__":
-    train_dataset, train_classes = read_data('train.csv')
-    test_dataset, test_classes = read_data('test.csv')
+    np.random.seed(0) # Constant seed for reproducibility
 
-    print(helpers.knn_examples(
-        train_dataset, train_classes, test_dataset, test_classes))
+    knn_experiment([1, 10, 100, 1000, 3000])
+
