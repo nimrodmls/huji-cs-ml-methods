@@ -1,8 +1,14 @@
 import numpy as np
 
+from knn import KNNClassifier
 import helpers
 
 ### Expermintation functions
+
+def knn_experiment_plotting(k_value):
+    train_dataset, train_classes = read_data('train.csv')
+    model = KNNClassifier(k_value, distance_metric='l2', train_dataset, train_classes)
+    helpers.plot_decision_boundaries(model, )
 
 def knn_experiment(k_combinations):
     train_dataset, train_classes = read_data('train.csv')
