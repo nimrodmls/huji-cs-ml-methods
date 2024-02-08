@@ -1,9 +1,36 @@
+import matplotlib.pyplot as plt
 import numpy as np
 
 from knn import KNNClassifier
 import helpers
 
 ### Expermintation functions
+
+def anomaly_detection_experiment():
+    distance_metric = 'l2'
+    k_value = 5
+    max_anomalies = 50
+
+    train_dataset, train_classes = read_data('train.csv')
+    test_dataset, _ = read_data('AD_test.csv')
+    # The distance metric and k value are constant in this experiment
+    # Training the model with the original train dataset
+    model = KNNClassifier(k_value, distance_metric=distance_metric)
+    # Fitting the model with the classes make no difference, we ignore classification
+    # in this experiment
+    model.fit(train_dataset, train_classes)
+    distances, _ = model.knn_distance(test_dataset)
+    scores = distances.sum(axis=1)
+    # Sorting the scores (in ascending order) and taking the last 50 values (the highest 50 scores)
+    # to these 50 scores we take the corresponding position from the dataset
+    anomalies = test_dataset[scores.argsort()[-max_anomalies:]]
+
+    # Plotting the results
+    plt.scatter(test_dataset[:, 0], test_dataset[:, 1], c='blue')
+    plt.scatter(anomalies[:, 0], anomalies[:, 1], c='red')
+    # Plotting the points from the original dataset, they will appear faintly
+    plt.scatter(train_dataset[:, 0], train_dataset[:, 1], c='black', alpha=0.01)
+    plt.show()
 
 def knn_experiment_plotting(k_value, distance_metric):
     train_dataset, train_classes = read_data('train.csv')
@@ -48,5 +75,6 @@ if __name__ == "__main__":
     #knn_experiment([1, 10, 100, 1000, 3000])
     #knn_experiment_plotting(1, 'l2')
     #knn_experiment_plotting(1, 'l1')
-    knn_experiment_plotting(3000, 'l2')
+    #knn_experiment_plotting(3000, 'l2')
+    anomaly_detection_experiment()
 
