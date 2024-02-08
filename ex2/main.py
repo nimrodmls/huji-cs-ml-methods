@@ -1,10 +1,34 @@
 import matplotlib.pyplot as plt
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 import numpy as np
 
 from knn import KNNClassifier
 import helpers
 
 ### Expermintation functions
+
+def decision_tree_experiment(max_depths, max_leaf_nodes):
+    train_dataset, train_classes = read_data('train.csv')
+    test_dataset, test_classes = read_data('test.csv')
+
+    print(f"Training Dataset Size: {train_dataset.shape[0]}")
+
+    accuracies = np.empty((len(max_depths), len(max_leaf_nodes), 3))
+
+    for depth_idx, depth in enumerate(max_depths):
+        print(f'--- Depth: {depth} ---')
+        for leaf_nodes_idx, leaf_nodes in enumerate(max_leaf_nodes):
+            tree_classifier = DecisionTreeClassifier(
+                max_depth=depth, max_leaf_nodes=leaf_nodes, random_state=42)
+            tree_classifier.fit(train_dataset, train_classes)
+            train_predictions = tree_classifier.predict(train_dataset)
+            accuracies[depth_idx, leaf_nodes_idx, 0] = np.mean(train_predictions == train_classes)
+            test_predictions = tree_classifier.predict(test_dataset)
+            accuracies[depth_idx, leaf_nodes_idx, 1] = np.mean(test_predictions == test_classes)
+
+            print(f'Depth: {depth}\tLeaf Nodes: {leaf_nodes}\tTrain Accuracy: {accuracies[depth_idx, leaf_nodes_idx, 0]}\tTest Accuracy: {accuracies[depth_idx, leaf_nodes_idx, 1]}')
+
+    print("break")
 
 def anomaly_detection_experiment():
     distance_metric = 'l2'
@@ -76,5 +100,6 @@ if __name__ == "__main__":
     #knn_experiment_plotting(1, 'l2')
     #knn_experiment_plotting(1, 'l1')
     #knn_experiment_plotting(3000, 'l2')
-    anomaly_detection_experiment()
+    #anomaly_detection_experiment()
+    decision_tree_experiment([1,2,4,6,10,20,50,100], [50, 100, 1000])
 
