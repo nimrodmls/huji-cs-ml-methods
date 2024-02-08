@@ -9,10 +9,14 @@ import helpers
 
 def decision_tree_experiment(max_depths, max_leaf_nodes):
     train_dataset, train_classes = read_data('train.csv')
+    validation_dataset, validation_classes = read_data('validation.csv')
     test_dataset, test_classes = read_data('test.csv')
 
     print(f"Training Dataset Size: {train_dataset.shape[0]}")
 
+    # The accuracies are stored in a 3D array, where the first dimension is the depth of the tree
+    # and the second dimension is the number of leaf nodes. The third dimension is the accuracy for
+    # the training, validation and test datasets respectively.
     accuracies = np.empty((len(max_depths), len(max_leaf_nodes), 3))
 
     for depth_idx, depth in enumerate(max_depths):
@@ -21,14 +25,29 @@ def decision_tree_experiment(max_depths, max_leaf_nodes):
             tree_classifier = DecisionTreeClassifier(
                 max_depth=depth, max_leaf_nodes=leaf_nodes, random_state=42)
             tree_classifier.fit(train_dataset, train_classes)
+            
+            # Predicting for each dataset, the accuracies are stored in manner where the first index
+            # is the accuracy for the training dataset, the second index is the accuracy for the validation
+            # dataset and the third index is the accuracy for the test dataset
             train_predictions = tree_classifier.predict(train_dataset)
             accuracies[depth_idx, leaf_nodes_idx, 0] = np.mean(train_predictions == train_classes)
+            validation_predictions = tree_classifier.predict(validation_dataset)
+            accuracies[depth_idx, leaf_nodes_idx, 1] = np.mean(validation_predictions == validation_classes)
             test_predictions = tree_classifier.predict(test_dataset)
-            accuracies[depth_idx, leaf_nodes_idx, 1] = np.mean(test_predictions == test_classes)
+            accuracies[depth_idx, leaf_nodes_idx, 2] = np.mean(test_predictions == test_classes)
 
-            print(f'Depth: {depth}\tLeaf Nodes: {leaf_nodes}\tTrain Accuracy: {accuracies[depth_idx, leaf_nodes_idx, 0]}\tTest Accuracy: {accuracies[depth_idx, leaf_nodes_idx, 1]}')
+            print(f'Depth: {depth}\tLeaf Nodes: {leaf_nodes}\tAccuracies [train,valid,test]: {[accuracies[depth_idx, leaf_nodes_idx, index] for index in range(3)]}')
 
-    print("break")
+    # Getting the maximum validation accuracy (it's the second index in the inner most array)
+    max_validation_acc_idx = np.argmax(accuracies[:, :, 1:2])
+    # Getting the hyperparameters of the best model
+    max_valid_depth_idx = max_validation_acc_idx // len(max_leaf_nodes)
+    max_valid_leaf_idx = max_validation_acc_idx % len(max_leaf_nodes)
+    max_valid_depth = max_depths[max_valid_depth_idx]
+    max_valid_leaf = max_leaf_nodes[max_valid_leaf_idx]
+
+    print(f'Best Model: Depth - {max_valid_depth}\tLeaf Nodes - {max_valid_leaf}')
+    print(f'Accuracies of best model [train,valid,test]: {[accuracies[max_valid_depth_idx, max_valid_leaf_idx, index] for index in range(3)]}')
 
 def anomaly_detection_experiment():
     distance_metric = 'l2'
@@ -65,7 +84,6 @@ def knn_experiment_plotting(k_value, distance_metric):
 
 def knn_experiment(k_combinations):
     train_dataset, train_classes = read_data('train.csv')
-    validation_dataset, validation_classes = read_data('validation.csv')
     test_dataset, test_classes = read_data('test.csv')
 
     # The distance metrics to be used
