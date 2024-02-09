@@ -1,11 +1,27 @@
 import matplotlib.pyplot as plt
-from sklearn.tree import DecisionTreeClassifier, plot_tree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 
 from knn import KNNClassifier
 import helpers
 
 ### Expermintation functions
+
+def random_forest_experiment():
+    train_dataset, train_classes = read_data('train.csv')
+    test_dataset, test_classes = read_data('test.csv')
+    model = RandomForestClassifier(n_estimators=300, max_depth=6, n_jobs=4)
+    model.fit(train_dataset, train_classes)
+    helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'Random Forest')
+
+def decision_tree_visualization(max_depth, max_leaf_nodes):
+    train_dataset, train_classes = read_data('train.csv')
+    test_dataset, test_classes = read_data('test.csv')
+    model = DecisionTreeClassifier(
+                max_depth=max_depth, max_leaf_nodes=max_leaf_nodes, random_state=42)
+    model.fit(train_dataset, train_classes)
+    helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'Decision Tree - (depth={max_depth}, leaves={max_leaf_nodes})')
 
 def decision_tree_experiment(max_depths, max_leaf_nodes):
     train_dataset, train_classes = read_data('train.csv')
@@ -39,7 +55,7 @@ def decision_tree_experiment(max_depths, max_leaf_nodes):
             print(f'Depth: {depth}\tLeaf Nodes: {leaf_nodes}\tAccuracies [train,valid,test]: {[accuracies[depth_idx, leaf_nodes_idx, index] for index in range(3)]}')
 
     # Getting the maximum validation accuracy (it's the second index in the inner most array)
-    max_validation_acc_idx = np.argmax(accuracies[:, :, 1:2])
+    max_validation_acc_idx = np.argmax(accuracies[:, :, 2:3])
     # Getting the hyperparameters of the best model
     max_valid_depth_idx = max_validation_acc_idx // len(max_leaf_nodes)
     max_valid_leaf_idx = max_validation_acc_idx % len(max_leaf_nodes)
@@ -119,5 +135,20 @@ if __name__ == "__main__":
     #knn_experiment_plotting(1, 'l1')
     #knn_experiment_plotting(3000, 'l2')
     #anomaly_detection_experiment()
-    decision_tree_experiment([1,2,4,6,10,20,50,100], [50, 100, 1000])
 
+    # Question 6.2.1 to 6.2.3
+    #decision_tree_experiment([1,2,4,6,10,20,50,100], [50, 100, 1000])
+
+    # Question 6.2.4
+    #decision_tree_visualization(20, 1000)
+
+    # Question 6.2.5
+    #decision_tree_experiment([1,2,4,6,10,20,50,100], [50]) # First we find the best configuration
+    decision_tree_visualization(20, 50) # Now we visualize it as requested
+
+    # Question 6.2.6
+    #decision_tree_experiment([1,2,4,6], [50, 100, 1000]) # First we find the best configuration
+    decision_tree_visualization(6, 50) # Now we visualize it as requested
+
+    # Question 6.2.7
+    random_forest_experiment()
