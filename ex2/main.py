@@ -55,7 +55,7 @@ def decision_tree_experiment(max_depths, max_leaf_nodes):
             print(f'Depth: {depth}\tLeaf Nodes: {leaf_nodes}\tAccuracies [train,valid,test]: {[accuracies[depth_idx, leaf_nodes_idx, index] for index in range(3)]}')
 
     # Getting the maximum validation accuracy (it's the second index in the inner most array)
-    max_validation_acc_idx = np.argmax(accuracies[:, :, 2:3])
+    max_validation_acc_idx = np.argmax(accuracies[:, :, 1:2])
     # Getting the hyperparameters of the best model
     max_valid_depth_idx = max_validation_acc_idx // len(max_leaf_nodes)
     max_valid_leaf_idx = max_validation_acc_idx % len(max_leaf_nodes)
