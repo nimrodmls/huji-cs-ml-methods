@@ -7,6 +7,7 @@ class Ridge_Regression:
 
     def __init__(self, lambd):
         self.lambd = lambd
+        self.opt = None
 
     def fit(self, X, Y):
 
@@ -18,13 +19,17 @@ class Ridge_Regression:
 
         Y = 2 * (Y - 0.5) # transform the labels to -1 and 1, instead of 0 and 1.
 
-        ########## YOUR CODE HERE ##########
+        X_T = np.transpose(X)
 
-        # compute the ridge regression weights using the formula from class / exercise.
-        # you may not use np.linalg.solve, but you may use np.linalg.inv
+        # We compute the optimal solution, namely W*
+        mat_a = np.matmul(X_T, X) / len(X) # This is a square matrix!
+        mat_a += self.lambd * np.identity(len(mat_a)) # Add the lambda term to the diagonal
+        mat_a = np.linalg.inv(mat_a) # Invert the matrix
+        mat_b = np.matmul(X_T, Y) / len(X)
 
-        ####################################
-        pass
+        # The optimal solution may be a 1xN matrix, so we convert it to proper matrix
+        # and transpose it for predict's use.
+        self.opt = np.transpose(np.atleast_2d(np.matmul(mat_a, mat_b)))
 
     def predict(self, X):
         """
@@ -32,21 +37,9 @@ class Ridge_Regression:
         :param X: The data to predict. np.ndarray of shape (N, D).
         :return: The predicted output. np.ndarray of shape (N,), of 0s and 1s.
         """
-        preds = None
-        ########## YOUR CODE HERE ##########
-
-        # compute the predicted output of the model.
-        # name your predicitons array preds.
-
-        ####################################
-
-        # transform the labels to 0s and 1s, instead of -1s and 1s.
-        # You may remove this line if your code already outputs 0s and 1s.
-        preds = (preds + 1) / 2
-
-        return preds
-
-
+        preds = np.matmul(X, self.opt)
+        a = (preds >= 0).astype(int).flatten()
+        return a
 
 class Logistic_Regression(nn.Module):
     def __init__(self, input_dim, output_dim):

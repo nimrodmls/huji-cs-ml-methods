@@ -34,7 +34,6 @@ def plot_decision_boundaries(model, X, y, title='Decision Boundaries'):
 
     # Make predictions on the meshgrid points.
     Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
-    print(Z.shape)
     Z = np.array([y_map[v] for v in Z])
     Z = Z.reshape(xx.shape)
     vmin = np.min([np.min(enum_y), np.min(Z)])
