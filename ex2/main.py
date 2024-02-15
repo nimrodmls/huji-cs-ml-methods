@@ -9,6 +9,10 @@ import helpers
 ### Expermintation functions
 
 def random_forest_experiment():
+    """
+    Experiment with the Random Forest model. Training on the training dataset, and plotting
+    the decision boundaries on the test dataset.
+    """
     train_dataset, train_classes = read_data('train.csv')
     test_dataset, test_classes = read_data('test.csv')
     model = RandomForestClassifier(n_estimators=300, max_depth=6, n_jobs=4)
@@ -16,6 +20,13 @@ def random_forest_experiment():
     helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'Random Forest')
 
 def decision_tree_visualization(max_depth, max_leaf_nodes):
+    """
+    Visualize the decision tree model with the given parameters.
+    Training on the train set and tested on the test set.
+
+    :param max_depth: The maximum depth of the tree
+    :param max_leaf_nodes: The maximum number of leaf nodes
+    """
     train_dataset, train_classes = read_data('train.csv')
     test_dataset, test_classes = read_data('test.csv')
     model = DecisionTreeClassifier(
@@ -24,6 +35,13 @@ def decision_tree_visualization(max_depth, max_leaf_nodes):
     helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'Decision Tree - (depth={max_depth}, leaves={max_leaf_nodes})')
 
 def decision_tree_experiment(max_depths, max_leaf_nodes):
+    """
+    Experiment with the Decision Tree model. Training on the training dataset and testing on the test dataset.
+    The accuracies are printed for each combination of parameters. The best model is also printed.
+
+    :param max_depths: List of the maximum depths of the tree
+    :param max_leaf_nodes: List of the maximum number of leaf nodes
+    """
     train_dataset, train_classes = read_data('train.csv')
     validation_dataset, validation_classes = read_data('validation.csv')
     test_dataset, test_classes = read_data('test.csv')
@@ -66,6 +84,12 @@ def decision_tree_experiment(max_depths, max_leaf_nodes):
     print(f'Accuracies of best model [train,valid,test]: {[accuracies[max_valid_depth_idx, max_valid_leaf_idx, index] for index in range(3)]}')
 
 def anomaly_detection_experiment():
+    """
+    Experiment anomaly detection using the kNN model. The model is trained on the training dataset
+    and the anomalies are detected on a special test dataset. The anomalies are plotted in red and the normal
+    points are plotted in blue. The original training dataset is also plotted in faint black.
+    """
+
     distance_metric = 'l2'
     k_value = 5
     max_anomalies = 50
@@ -92,6 +116,11 @@ def anomaly_detection_experiment():
     plt.show()
 
 def knn_experiment_plotting(k_value, distance_metric):
+    """
+    Experiment with the kNN model with the given nearest k value and distance metric.
+    The decision boundaries are plotted on the test dataset.
+    """
+
     train_dataset, train_classes = read_data('train.csv')
     test_dataset, test_classes = read_data('test.csv')
     model = KNNClassifier(k_value, distance_metric=distance_metric)
@@ -99,6 +128,14 @@ def knn_experiment_plotting(k_value, distance_metric):
     helpers.plot_decision_boundaries(model, test_dataset, test_classes, title=f'kNN - (k={k_value}, distance_metric={distance_metric})')
 
 def knn_experiment(k_combinations):
+    """
+    Experiment with the kNN model with the given k values. 
+    Each k value is tested with the L1 and L2 distance metrics.
+    The accuracies are printed for each combination of parameters.
+
+    :param k_combinations: List of 'k values' to be tested
+    """
+
     train_dataset, train_classes = read_data('train.csv')
     test_dataset, test_classes = read_data('test.csv')
 
@@ -128,12 +165,17 @@ def read_data(filename):
     return dataset, classes
 
 if __name__ == "__main__":
+    # NOTE TO THE GRADER: You can comment out the lines below to run the experiments you want
+
     np.random.seed(0) # Constant seed for reproducibility
 
+    # Section 5.2 Questions
     #knn_experiment([1, 10, 100, 1000, 3000])
     #knn_experiment_plotting(1, 'l2')
     #knn_experiment_plotting(1, 'l1')
     #knn_experiment_plotting(3000, 'l2')
+
+    # Section 5.3
     #anomaly_detection_experiment()
 
     # Question 6.2.1 to 6.2.3
@@ -143,11 +185,11 @@ if __name__ == "__main__":
     #decision_tree_visualization(20, 1000)
 
     # Question 6.2.5
-    #decision_tree_experiment([1,2,4,6,10,20,50,100], [50]) # First we find the best configuration
+    #decision_tree_experiment([1,2,4,6,10,20,50,100], [50]) # First we find the best configuration - NOT MANDATORY
     decision_tree_visualization(20, 50) # Now we visualize it as requested
 
     # Question 6.2.6
-    #decision_tree_experiment([1,2,4,6], [50, 100, 1000]) # First we find the best configuration
+    #decision_tree_experiment([1,2,4,6], [50, 100, 1000]) # First we find the best configuration - NOT MANDATORY
     decision_tree_visualization(6, 50) # Now we visualize it as requested
 
     # Question 6.2.7
