@@ -47,30 +47,33 @@ def ridge_regression_lambda_accuracy_plots(lambda_values):
     test_accuracies = np.mean(test_preds == test_classes, axis=1)
 
     # Plotting the lambda-accuracy, for each dataset
+    plt.title('Ridge Regression - λ vs Accuracy')
     plt.ylabel('Accuracy')
-    plt.xlabel('Lambda')
+    plt.xlabel('λ')
     plt.scatter(lambda_values, train_accuracies, color='green', zorder=2)
-    plt.plot(lambda_values, train_accuracies, alpha=0.2, color='green', zorder=1)
+    plt.plot(lambda_values, train_accuracies, alpha=0.2, color='green', zorder=1, label='Train')
     plt.scatter(lambda_values, validation_accuracies, color='black', zorder=2)
-    plt.plot(lambda_values, validation_accuracies, alpha=0.2, color='black', zorder=1)
+    plt.plot(lambda_values, validation_accuracies, alpha=0.2, color='black', zorder=1, label='Validation')
     plt.scatter(lambda_values, test_accuracies, color='red', zorder=2)
-    plt.plot(lambda_values, test_accuracies, alpha=0.2, color='red', zorder=1)
+    plt.plot(lambda_values, test_accuracies, alpha=0.2, color='red', zorder=1, label='Test')
+    plt.legend()
     plt.show()
     
-    return validation_accuracies
+    return validation_accuracies, test_accuracies
 
 def ridge_regression_prediction_plot(best_lambda, worst_lambda):
     """
     """
     train_set, train_classes = read_data('train.csv')
+    test_set, test_classes = read_data('test.csv')
 
     ridge = models.Ridge_Regression(best_lambda)
     ridge.fit(train_set, train_classes)
-    helpers.plot_decision_boundaries(ridge, train_set, train_classes, title='Ridge Regression - Best Lambda')
+    helpers.plot_decision_boundaries(ridge, test_set, test_classes, title=f'Ridge Regression - Best λ ({best_lambda})')
 
     ridge = models.Ridge_Regression(worst_lambda)
     ridge.fit(train_set, train_classes)
-    helpers.plot_decision_boundaries(ridge, train_set, train_classes, title='Ridge Regression - Worst Lambda')
+    helpers.plot_decision_boundaries(ridge, test_set, test_classes, title=f'Ridge Regression - Worst λ ({worst_lambda})')
 
 if __name__ == "__main__":
     # train_set, train_classes = read_data('train.csv')
@@ -82,10 +85,12 @@ if __name__ == "__main__":
     # print(f'Ridge Regression Accuracy: {np.mean(preds == test_classes)}')
     # helpers.plot_decision_boundaries(ridge, test_set, test_classes, title='Ridge Regression')
     lambda_values = [0, 2, 4, 6, 8, 10]
-    validation_accuracies = ridge_regression_lambda_accuracy_plots(lambda_values)
-    best_lambda = np.argmax(validation_accuracies)
-    worst_lambda = np.argmin(validation_accuracies)
+    validation_accuracies, test_accuracies = ridge_regression_lambda_accuracy_plots(lambda_values)
+    best_lambda_idx = np.argmax(validation_accuracies)
+    worst_lambda_idx = np.argmin(validation_accuracies)
+    best_lambda = lambda_values[best_lambda_idx]
+    worst_lambda = lambda_values[worst_lambda_idx]
     print("## Experiment #1 - Ridge Regression")
-    print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
-    print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
+    print(f'Best λ: {best_lambda}, Validation Accuracy: {validation_accuracies[best_lambda_idx]}, Test Accuracy: {test_accuracies[best_lambda_idx]}')
+    print(f'Worst λ: {worst_lambda}, Validation Accuracy: {validation_accuracies[worst_lambda_idx]}, Test Accuracy: {test_accuracies[worst_lambda_idx]}')
     ridge_regression_prediction_plot(best_lambda, worst_lambda)

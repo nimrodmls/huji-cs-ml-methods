@@ -38,8 +38,7 @@ class Ridge_Regression:
         :return: The predicted output. np.ndarray of shape (N,), of 0s and 1s.
         """
         preds = np.matmul(X, self.opt)
-        a = (preds >= 0).astype(int).flatten()
-        return a
+        return (preds >= 0).astype(int).flatten()
 
 class Logistic_Regression(nn.Module):
     def __init__(self, input_dim, output_dim):
