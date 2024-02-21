@@ -1,4 +1,5 @@
 import torch
+from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -35,6 +36,36 @@ class ExperimentDataset(torch.utils.data.Dataset):
         return self.features[idx], self.labels[idx]
 
 ## Experiments
+
+def decision_tree_experiment(max_depth):
+    """
+    Experiment with the Decision Tree model. Training on the training dataset and testing on the test dataset.
+    The accuracies are printed for each combination of parameters. The best model is also printed.
+
+    :param max_depths: List of the maximum depths of the tree
+    :param max_leaf_nodes: List of the maximum number of leaf nodes
+    """
+    train_dataset, train_classes = read_data('train_multiclass.csv')
+    validation_dataset, validation_classes = read_data('validation_multiclass.csv')
+    test_dataset, test_classes = read_data('test_multiclass.csv')
+
+    tree_classifier = DecisionTreeClassifier(
+        max_depth=max_depth, random_state=42)
+    tree_classifier.fit(train_dataset, train_classes)
+    
+    # Predicting for each dataset, the accuracies are stored in manner where the first index
+    # is the accuracy for the training dataset, the second index is the accuracy for the validation
+    # dataset and the third index is the accuracy for the test dataset
+    train_predictions = tree_classifier.predict(train_dataset)
+    train_accuracy = np.mean(train_predictions == train_classes)
+    validation_predictions = tree_classifier.predict(validation_dataset)
+    validation_accuracy = np.mean(validation_predictions == validation_classes)
+    test_predictions = tree_classifier.predict(test_dataset)
+    test_accuracy = np.mean(test_predictions == test_classes)
+
+    print(f'DT Accuracies: Train - {train_accuracy}, Validation - {validation_accuracy}, Test - {test_accuracy}')
+    helpers.plot_decision_boundaries(
+        tree_classifier, test_dataset, test_classes, title=f'Decision Tree - (depth={max_depth})')
 
 def evaluate_model(dataloader: torch.utils.data.DataLoader, 
                    model: torch.nn.Module, 
@@ -270,6 +301,10 @@ def ridge_regression_prediction_plot(best_lambda, worst_lambda):
 if __name__ == "__main__":
     np.random.seed(42)
     torch.manual_seed(42)
+
+    # NOTE TO GRADER: Uncomment the experiment you want to run
+
+    # Q6.2.1 - Ridge Regression experiment
     # lambda_values = [0, 2, 4, 6, 8, 10]
     # validation_accuracies = ridge_regression_lambda_accuracy_plots(lambda_values)
     # best_lambda = np.argmax(validation_accuracies)
@@ -277,10 +312,18 @@ if __name__ == "__main__":
     # print("## Experiment #1 - Ridge Regression")
     # print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
     # print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
-    # ridge_regression_prediction_plot(best_lambda, worst_lambda)
 
-    # Two-class experiment
-    logistic_regression_sgd_full([0.1, 0.01, 0.001])
+    # Q6.2.2 - Ridge Regression boundry plot
+    #ridge_regression_prediction_plot(best_lambda, worst_lambda)
 
-    # Multi-class experiment
-    logistic_regression_sgd_full([0.01, 0.001, 0.0003], epochs=30, decay_step_size=5, decay_rate=0.3)
+    # Q9.3(.1/2/3) - Two-class experiment
+    #logistic_regression_sgd_full([0.1, 0.01, 0.001], epochs=10)
+
+    # Q9.4.1 & Q9.4.2 - Multi-class experiment
+    #logistic_regression_sgd_full([0.01, 0.001, 0.0003], epochs=30, decay_step_size=5, decay_rate=0.3)
+
+    # Q9.4.3 - Decision Tree experiment
+    #decision_tree_experiment(2)
+
+    # Q9.4.4 - Decision Tree experiment
+    #decision_tree_experiment(10)
