@@ -67,7 +67,9 @@ def logistic_regression_sgd_classifier(
         learning_rate: float, 
         train_data: ExperimentDataset, 
         validation_data: ExperimentDataset, 
-        test_data: ExperimentDataset):
+        test_data: ExperimentDataset,
+        decay_step_size: int,
+        decay_rate: float):
     """
     """
     device = torch.device('cpu')#'cuda' if torch.cuda.is_available() else 'cpu')
@@ -75,7 +77,7 @@ def logistic_regression_sgd_classifier(
 
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss()
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.3)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_step_size, gamma=decay_rate)
 
     # For each epoch we store the mean loss & accuracy for the training, validation and test sets
     train_results = np.empty(shape=(epochs, 2))
@@ -121,23 +123,22 @@ def logistic_regression_sgd_classifier(
 
     return train_results, validation_results, test_results
 
-def logistic_regression_sgd_full(learning_rates):
+def logistic_regression_sgd_full(learning_rates, epochs, decay_step_size = 15, decay_rate = 0.3):
     """
     """
     # Constants
     batch_size = 32
-    epochs = 10
 
     # Loading all data
-    train_raw_data, train_raw_labels = read_data('train.csv')
+    train_raw_data, train_raw_labels = read_data('train_multiclass.csv')
     train_dataset = ExperimentDataset(torch.tensor(train_raw_data).float(), torch.tensor(train_raw_labels).long())
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    validation_raw_data, validataion_raw_labels = read_data('validation.csv')
+    validation_raw_data, validataion_raw_labels = read_data('validation_multiclass.csv')
     validation_dataset = ExperimentDataset(torch.tensor(validation_raw_data).float(), torch.tensor(validataion_raw_labels).long())
     validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-    test_raw_data, test_raw_labels = read_data('test.csv')
+    test_raw_data, test_raw_labels = read_data('test_multiclass.csv')
     test_dataset = ExperimentDataset(torch.tensor(test_raw_data).float(), torch.tensor(test_raw_labels).long())
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -155,7 +156,8 @@ def logistic_regression_sgd_full(learning_rates):
         print(f'Training model with learning rate: {lr}')
         # Training the model
         lr_train_results, lr_validation_results, lr_test_results = logistic_regression_sgd_classifier(
-            epochs, model, lr, train_dataloader, validation_dataloader, test_dataloader)
+            epochs, model, lr, train_dataloader, validation_dataloader, 
+            test_dataloader, decay_step_size, decay_rate)
         
         # Storing the results
         train_results[lr_idx] = lr_train_results
@@ -174,18 +176,42 @@ def logistic_regression_sgd_full(learning_rates):
         test_raw_labels, 
         title=f'Logistic Regression - Best Validation Accuracy {learning_rates[best_model_idx]}')
     
-    # Plotting the training, validation and test loss for the best model per epoch
+    # Plotting the training, validation and test LOSS for the best model per epoch
     epoch_plot = range(epochs)
-    plt.title('Logistic Regression - Loss per Epoch')
+    plt.title(f'Logistic Regression - Loss per Epoch, Best Model: {learning_rates[best_model_idx]}')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
     plt.xticks(epoch_plot)
-    plt.plot(epoch_plot, train_results[best_model_idx, :, 0], color='green', label='Training Loss')
+    plt.plot(epoch_plot, train_results[best_model_idx, :, 0], color='green', label='Training Set')
     plt.scatter(epoch_plot, train_results[best_model_idx, :, 0], color='green')
-    plt.plot(epoch_plot, validation_results[best_model_idx, :, 0], color='orange', label='Validation Loss')
+    plt.plot(epoch_plot, validation_results[best_model_idx, :, 0], color='orange', label='Validation Set')
     plt.scatter(epoch_plot, validation_results[best_model_idx, :, 0], color='orange')
-    plt.plot(epoch_plot, test_results[best_model_idx, :, 0], color='red', label='Test Loss')
+    plt.plot(epoch_plot, test_results[best_model_idx, :, 0], color='red', label='Test Set')
     plt.scatter(epoch_plot, test_results[best_model_idx, :, 0], color='red')
+    plt.legend()
+    plt.show()
+
+    # Plotting the training, validation and test ACCURACY for the best model per epoch
+    epoch_plot = range(epochs)
+    plt.title(f'Logistic Regression - Accuracy per Epoch, Best Model: {learning_rates[best_model_idx]}')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Epoch')
+    plt.xticks(epoch_plot)
+    plt.plot(epoch_plot, train_results[best_model_idx, :, 1], color='green', label='Training Set')
+    plt.scatter(epoch_plot, train_results[best_model_idx, :, 1], color='green')
+    plt.plot(epoch_plot, validation_results[best_model_idx, :, 1], color='orange', label='Validation Set')
+    plt.scatter(epoch_plot, validation_results[best_model_idx, :, 1], color='orange')
+    plt.plot(epoch_plot, test_results[best_model_idx, :, 1], color='red', label='Test Set')
+    plt.scatter(epoch_plot, test_results[best_model_idx, :, 1], color='red')
+    plt.legend()
+    plt.show()
+
+    # Plotting the test and validation accuracies against the learning rates
+    plt.title('Logistic Regression - Accuracy per Learning Rate')
+    plt.ylabel('Accuracy')
+    plt.xlabel('Learning Rate')
+    plt.scatter(learning_rates, validation_results[:, -1, 1], color='blue', label='Validation Set')
+    plt.scatter(learning_rates, test_results[:, -1, 1], color='red', label='Test Set')
     plt.legend()
     plt.show()
         
@@ -252,5 +278,9 @@ if __name__ == "__main__":
     # print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
     # print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
     # ridge_regression_prediction_plot(best_lambda, worst_lambda)
-    #logistic_regression_sgd_full([0.1, 0.01, 0.001])
-    logistic_regression_sgd_full([0.001])
+
+    # Two-class experiment
+    logistic_regression_sgd_full([0.1, 0.01, 0.001])
+
+    # Multi-class experiment
+    logistic_regression_sgd_full([0.01, 0.001, 0.0003], epochs=30, decay_step_size=5, decay_rate=0.3)
