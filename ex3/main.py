@@ -356,11 +356,11 @@ if __name__ == "__main__":
     # print(f'Best λ: {best_lambda}, Validation Accuracy: {validation_accuracies[best_lambda_idx]}, Test Accuracy: {test_accuracies[best_lambda_idx]}')
     # print(f'Worst λ: {worst_lambda}, Validation Accuracy: {validation_accuracies[worst_lambda_idx]}, Test Accuracy: {test_accuracies[worst_lambda_idx]}')
 
-    print("## Experiment #2 - Gradient Descent")
-    np_gradient_descent()
-
     # Q6.2.2 - Ridge Regression boundry plot
     #ridge_regression_prediction_plot(best_lambda, worst_lambda)
+
+    print("## Experiment #2 - Gradient Descent")
+    np_gradient_descent()
 
     # Q9.3(.1/2/3) - Two-class experiment
     #logistic_regression_sgd_full([0.1, 0.01, 0.001], epochs=10)
