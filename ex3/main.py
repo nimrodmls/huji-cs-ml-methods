@@ -58,7 +58,7 @@ def evaluate_model(dataloader: torch.utils.data.DataLoader,
             loss_values.append(loss.item())
             correct_preds += torch.sum(torch.argmax(preds, dim=1) == labels).item()
 
-    # Return the average loss and the accuracy
+    # Returning the loss values and the accuracy
     return np.mean(loss_values), correct_preds / len(dataloader.dataset)
 
 def logistic_regression_sgd_classifier(
@@ -141,30 +141,53 @@ def logistic_regression_sgd_full(learning_rates):
     test_dataset = ExperimentDataset(torch.tensor(test_raw_data).float(), torch.tensor(test_raw_labels).long())
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
-    validation_accuracies = np.empty(shape=(len(learning_rates)))
+    train_results = np.empty(shape=(len(learning_rates), epochs, 2))
+    validation_results = np.empty(shape=(len(learning_rates), epochs, 2))
+    test_results = np.empty(shape=(len(learning_rates), epochs, 2))
+
     trained_models = []
     for lr_idx, lr in enumerate(learning_rates):
-        # Create the model - Input is 2d (longtitude and latitude) and we have 2 classes
-        model = models.Logistic_Regression(2, 2)
+        # Create the model - Input is 2d (longtitude and latitude), classes are variable
+        # to support multi-class classifications
+        model = models.Logistic_Regression(2, len(np.unique(train_raw_labels)))
+        trained_models.append(model)
 
         print(f'Training model with learning rate: {lr}')
         # Training the model
-        _, validation_results, _ = logistic_regression_sgd_classifier(
+        lr_train_results, lr_validation_results, lr_test_results = logistic_regression_sgd_classifier(
             epochs, model, lr, train_dataloader, validation_dataloader, test_dataloader)
         
-        # Documenting the validation accuracy for each learning rate, of the LAST epoch
-        validation_accuracies[lr_idx] = validation_results[-1, 1]
-        trained_models.append(model)
-        print(f'lr {lr} Validation accuracy: {validation_accuracies[lr_idx]}')
-
+        # Storing the results
+        train_results[lr_idx] = lr_train_results
+        validation_results[lr_idx] = lr_validation_results
+        test_results[lr_idx] = lr_test_results
+        
     # Choosing the model according to the best validation accuracy
-    best_model_idx = np.argmax(validation_accuracies)
+    best_model_idx = np.argmax(validation_results[:, -1, 1])
     chosen_model = trained_models[best_model_idx]
+    print(f'Best model learning rate: {learning_rates[best_model_idx]}, Validation Accuracy: {validation_results[best_model_idx, -1, 1]}')
+
+    # Plotting the decision boundaries of the best model
     helpers.plot_decision_boundaries(
         chosen_model, 
         test_raw_data, 
         test_raw_labels, 
         title=f'Logistic Regression - Best Validation Accuracy {learning_rates[best_model_idx]}')
+    
+    # Plotting the training, validation and test loss for the best model per epoch
+    epoch_plot = range(epochs)
+    plt.title('Logistic Regression - Loss per Epoch')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.xticks(epoch_plot)
+    plt.plot(epoch_plot, train_results[best_model_idx, :, 0], color='green', label='Training Loss')
+    plt.scatter(epoch_plot, train_results[best_model_idx, :, 0], color='green')
+    plt.plot(epoch_plot, validation_results[best_model_idx, :, 0], color='orange', label='Validation Loss')
+    plt.scatter(epoch_plot, validation_results[best_model_idx, :, 0], color='orange')
+    plt.plot(epoch_plot, test_results[best_model_idx, :, 0], color='red', label='Test Loss')
+    plt.scatter(epoch_plot, test_results[best_model_idx, :, 0], color='red')
+    plt.legend()
+    plt.show()
         
 def ridge_regression_lambda_accuracy_plots(lambda_values):
     """
@@ -229,4 +252,5 @@ if __name__ == "__main__":
     # print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
     # print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
     # ridge_regression_prediction_plot(best_lambda, worst_lambda)
-    logistic_regression_sgd_full([0.1, 0.01, 0.001])
+    #logistic_regression_sgd_full([0.1, 0.01, 0.001])
+    logistic_regression_sgd_full([0.001])
