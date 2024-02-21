@@ -40,6 +40,8 @@ def evaluate_model(dataloader: torch.utils.data.DataLoader,
                    model: torch.nn.Module, 
                    criterion: torch.nn.Module, 
                    device: torch.device):
+    """
+    """
     loss_values = []
     correct_preds = 0
 
@@ -57,37 +59,28 @@ def evaluate_model(dataloader: torch.utils.data.DataLoader,
             correct_preds += torch.sum(torch.argmax(preds, dim=1) == labels).item()
 
     # Return the average loss and the accuracy
-    return np.mean(loss_values), correct_preds / len(dataloader)
+    return np.mean(loss_values), correct_preds / len(dataloader.dataset)
 
-def logistic_regression_sgd_classifier(learning_rate):
+def logistic_regression_sgd_classifier(
+        epochs: int,
+        model: torch.nn.Module, 
+        learning_rate: float, 
+        train_data: ExperimentDataset, 
+        validation_data: ExperimentDataset, 
+        test_data: ExperimentDataset):
     """
     """
-    # Constant parameters
-    epochs = 10
-    batch_size = 32
-
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-    # Create the datasets and dataloaders
-    train_dataset = ExperimentDataset(*read_data('train.csv'))
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size)
-    validation_dataset = ExperimentDataset(*read_data('validation.csv'))
-    validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size)
-    test_dataset = ExperimentDataset(*read_data('test.csv'))
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size)
-
-    # Create the model - 
-    # Our input is 2d (longtitude and latitude) and the output is 1d (class label 0 or 1)
-    model = models.Logistic_Regression(2, 1)
+    device = torch.device('cpu')#'cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
+
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss()
     lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.3)
 
     # For each epoch we store the mean loss & accuracy for the training, validation and test sets
-    train_data = np.array(shape=(epochs, 2))
-    validation_data = np.array(shape=(epochs, 2))
-    test_data = np.array(shape=(epochs, 2))
+    train_results = np.empty(shape=(epochs, 2))
+    validation_results = np.empty(shape=(epochs, 2))
+    test_results = np.empty(shape=(epochs, 2))
 
     for epoch in range(epochs):
         train_correct_preds = 0
@@ -95,7 +88,7 @@ def logistic_regression_sgd_classifier(learning_rate):
 
         # Learning loop
         model.train() # Enabling training mode
-        for features, labels in train_dataloader:
+        for features, labels in train_data:
             features = features.to(device)
             labels = labels.to(device)
 
@@ -110,39 +103,69 @@ def logistic_regression_sgd_classifier(learning_rate):
 
         lr_scheduler.step()
 
-        training_loss = np.mean(train_loss_values)
-        training_accuracy = train_correct_preds / len(train_dataloader)
-        train_data[epoch] = [training_loss, training_accuracy]
+        training_mean_loss = np.mean(train_loss_values)
+        training_accuracy = train_correct_preds / len(train_data.dataset)
+        train_results[epoch] = [training_mean_loss, training_accuracy]
+
+        print(f'Epoch {epoch} - Training Loss: {training_mean_loss}, Training Accuracy: {training_accuracy}')
 
         # Evaluating the model
         # On the validation set
         validation_loss, validation_accuracy = evaluate_model(
-                                validation_dataloader, model, criterion, device)
-        validation_data[epoch] = [validation_loss, validation_accuracy]
+                                validation_data, model, criterion, device)
+        validation_results[epoch] = [validation_loss, validation_accuracy]
         # On the test set
         test_loss, test_accuracy = evaluate_model(
-                                test_dataloader, model, criterion, device)
-        test_data[epoch] = [test_loss, test_accuracy]
+                                test_data, model, criterion, device)
+        test_results[epoch] = [test_loss, test_accuracy]
 
-    return train_data, validation_data, test_data, model
+    return train_results, validation_results, test_results
 
-def logistic_regression_sgd(learning_rates):
+def logistic_regression_sgd_full(learning_rates):
     """
     """
+    # Constants
+    batch_size = 32
+    epochs = 10
 
-    validation_accuracies = np.array(shape=(len(learning_rates)))
+    # Loading all data
+    train_raw_data, train_raw_labels = read_data('train.csv')
+    train_dataset = ExperimentDataset(torch.tensor(train_raw_data).float(), torch.tensor(train_raw_labels).long())
+    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    validation_raw_data, validataion_raw_labels = read_data('validation.csv')
+    validation_dataset = ExperimentDataset(torch.tensor(validation_raw_data).float(), torch.tensor(validataion_raw_labels).long())
+    validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
+
+    test_raw_data, test_raw_labels = read_data('test.csv')
+    test_dataset = ExperimentDataset(torch.tensor(test_raw_data).float(), torch.tensor(test_raw_labels).long())
+    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    validation_accuracies = np.empty(shape=(len(learning_rates)))
     trained_models = []
-    for lr in learning_rates:
-        _, validation_data, _, model = logistic_regression_sgd_classifier(lr)
-        validation_accuracies[lr] = validation_data[-1, 1]
+    for lr_idx, lr in enumerate(learning_rates):
+        # Create the model - Input is 2d (longtitude and latitude) and we have 2 classes
+        model = models.Logistic_Regression(2, 2)
+
+        print(f'Training model with learning rate: {lr}')
+        # Training the model
+        _, validation_results, _ = logistic_regression_sgd_classifier(
+            epochs, model, lr, train_dataloader, validation_dataloader, test_dataloader)
+        
+        # Documenting the validation accuracy for each learning rate, of the LAST epoch
+        validation_accuracies[lr_idx] = validation_results[-1, 1]
         trained_models.append(model)
+        print(f'lr {lr} Validation accuracy: {validation_accuracies[lr_idx]}')
 
     # Choosing the model according to the best validation accuracy
-    chosen_model = trained_models[np.argmax(validation_accuracies)]
-
-    helpers.plot_decision_boundaries(chosen_model, )
+    best_model_idx = np.argmax(validation_accuracies)
+    chosen_model = trained_models[best_model_idx]
+    helpers.plot_decision_boundaries(
+        chosen_model, 
+        test_raw_data, 
+        test_raw_labels, 
+        title=f'Logistic Regression - Best Validation Accuracy {learning_rates[best_model_idx]}')
         
-
 def ridge_regression_lambda_accuracy_plots(lambda_values):
     """
     """
@@ -185,29 +208,25 @@ def ridge_regression_prediction_plot(best_lambda, worst_lambda):
     """
     """
     train_set, train_classes = read_data('train.csv')
+    test_set, test_classes = read_data('test.csv')
 
     ridge = models.Ridge_Regression(best_lambda)
     ridge.fit(train_set, train_classes)
-    helpers.plot_decision_boundaries(ridge, train_set, train_classes, title='Ridge Regression - Best Lambda')
+    helpers.plot_decision_boundaries(ridge, test_set, test_classes, title='Ridge Regression - Best Lambda')
 
     ridge = models.Ridge_Regression(worst_lambda)
     ridge.fit(train_set, train_classes)
-    helpers.plot_decision_boundaries(ridge, train_set, train_classes, title='Ridge Regression - Worst Lambda')
+    helpers.plot_decision_boundaries(ridge, test_set, test_classes, title='Ridge Regression - Worst Lambda')
 
 if __name__ == "__main__":
-    # train_set, train_classes = read_data('train.csv')
-    # test_set, test_classes = read_data('test.csv')
-
-    # ridge = models.Ridge_Regression(2)
-    # ridge.fit(train_set, train_classes)
-    # preds = ridge.predict(test_set)
-    # print(f'Ridge Regression Accuracy: {np.mean(preds == test_classes)}')
-    # helpers.plot_decision_boundaries(ridge, test_set, test_classes, title='Ridge Regression')
-    lambda_values = [0, 2, 4, 6, 8, 10]
-    validation_accuracies = ridge_regression_lambda_accuracy_plots(lambda_values)
-    best_lambda = np.argmax(validation_accuracies)
-    worst_lambda = np.argmin(validation_accuracies)
-    print("## Experiment #1 - Ridge Regression")
-    print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
-    print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
-    ridge_regression_prediction_plot(best_lambda, worst_lambda)
+    np.random.seed(42)
+    torch.manual_seed(42)
+    # lambda_values = [0, 2, 4, 6, 8, 10]
+    # validation_accuracies = ridge_regression_lambda_accuracy_plots(lambda_values)
+    # best_lambda = np.argmax(validation_accuracies)
+    # worst_lambda = np.argmin(validation_accuracies)
+    # print("## Experiment #1 - Ridge Regression")
+    # print(f'Best lambda: {lambda_values[best_lambda]}, Accuracy: {validation_accuracies[best_lambda]}')
+    # print(f'Worst lambda: {lambda_values[worst_lambda]}, Accuracy: {validation_accuracies[worst_lambda]}')
+    # ridge_regression_prediction_plot(best_lambda, worst_lambda)
+    logistic_regression_sgd_full([0.1, 0.01, 0.001])
