@@ -71,7 +71,6 @@ def np_gradient_descent():
     plt.title(f'Gradient Descent - {steps-1} steps, Learning Rate = {alpha}')
     plt.xlabel('x')
     plt.ylabel('y')
-    #plt.plot(w_values[:,0], w_values[:,1], c=np.arange(steps), alpha=0.2, zorder=1)
     collection = plt.scatter(w_values[:,0], w_values[:,1], c=np.arange(steps), cmap=cmap, zorder=2)
     plt.colorbar(collection, label='Step')
     plt.show()
@@ -179,8 +178,6 @@ def logistic_regression_sgd_classifier(
         training_accuracy = train_correct_preds / len(train_data.dataset)
         train_results[epoch] = [training_mean_loss, training_accuracy]
 
-        print(f'Epoch {epoch} - Training Loss: {training_mean_loss}, Training Accuracy: {training_accuracy}')
-
         # Evaluating the model
         # On the validation set
         validation_loss, validation_accuracy = evaluate_model(
@@ -191,24 +188,26 @@ def logistic_regression_sgd_classifier(
                                 test_data, model, criterion, device)
         test_results[epoch] = [test_loss, test_accuracy]
 
+        print(f'Epoch {epoch} - Loss: {training_mean_loss}, Validation Accuracy: {validation_accuracy}')
+
     return train_results, validation_results, test_results
 
-def logistic_regression_sgd_full(learning_rates, epochs, decay_step_size = 15, decay_rate = 0.3):
+def logistic_regression_sgd_full(dataset_paths, learning_rates, epochs, decay_step_size = 15, decay_rate = 0.3):
     """
     """
     # Constants
     batch_size = 32
 
     # Loading all data
-    train_raw_data, train_raw_labels = read_data('train_multiclass.csv')
+    train_raw_data, train_raw_labels = read_data(dataset_paths[0])
     train_dataset = ExperimentDataset(torch.tensor(train_raw_data).float(), torch.tensor(train_raw_labels).long())
     train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-    validation_raw_data, validataion_raw_labels = read_data('validation_multiclass.csv')
+    validation_raw_data, validataion_raw_labels = read_data(dataset_paths[1])
     validation_dataset = ExperimentDataset(torch.tensor(validation_raw_data).float(), torch.tensor(validataion_raw_labels).long())
     validation_dataloader = torch.utils.data.DataLoader(validation_dataset, batch_size=batch_size, shuffle=False)
 
-    test_raw_data, test_raw_labels = read_data('test_multiclass.csv')
+    test_raw_data, test_raw_labels = read_data(dataset_paths[2])
     test_dataset = ExperimentDataset(torch.tensor(test_raw_data).float(), torch.tensor(test_raw_labels).long())
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
@@ -237,7 +236,7 @@ def logistic_regression_sgd_full(learning_rates, epochs, decay_step_size = 15, d
     # Choosing the model according to the best validation accuracy
     best_model_idx = np.argmax(validation_results[:, -1, 1])
     chosen_model = trained_models[best_model_idx]
-    print(f'Best model learning rate: {learning_rates[best_model_idx]}, Validation Accuracy: {validation_results[best_model_idx, -1, 1]}')
+    print(f'Best model learning rate: {learning_rates[best_model_idx]}, Validation Accuracy: {validation_results[best_model_idx, -1, 1]}, Test Accuracy: {test_results[best_model_idx, -1, 1]}')
 
     # Plotting the decision boundaries of the best model
     helpers.plot_decision_boundaries(
@@ -359,14 +358,22 @@ if __name__ == "__main__":
     # Q6.2.2 - Ridge Regression boundry plot
     #ridge_regression_prediction_plot(best_lambda, worst_lambda)
 
-    print("## Experiment #2 - Gradient Descent")
-    np_gradient_descent()
+    # Sec 7 - Gradient Descent with numpy
+    #np_gradient_descent()
 
     # Q9.3(.1/2/3) - Two-class experiment
-    #logistic_regression_sgd_full([0.1, 0.01, 0.001], epochs=10)
+    # logistic_regression_sgd_full(
+    #     dataset_paths=["train.csv", "validation.csv", "test.csv"], 
+    #     learning_rates=[0.1, 0.01, 0.001], 
+    #     epochs=10)
 
     # Q9.4.1 & Q9.4.2 - Multi-class experiment
-    #logistic_regression_sgd_full([0.01, 0.001, 0.0003], epochs=30, decay_step_size=5, decay_rate=0.3)
+    logistic_regression_sgd_full(
+        dataset_paths=["train_multiclass.csv", "validation_multiclass.csv", "test_multiclass.csv"],
+        learning_rates=[0.01, 0.001, 0.0003], 
+        epochs=30, 
+        decay_step_size=5, 
+        decay_rate=0.3)
 
     # Q9.4.3 - Decision Tree experiment
     #decision_tree_experiment(2)
