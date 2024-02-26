@@ -23,6 +23,7 @@ def read_data(filename):
 
 class ExperimentDataset(torch.utils.data.Dataset):
     """
+    A simple dataset class for the experiments.
     """
 
     def __init__(self, features, labels):
@@ -47,6 +48,8 @@ def simple_func_gradient(w):
 
 def np_gradient_descent():
     """
+    Running the gradient descent algorithm with numpy for the function f(x, y) = (x - 3)^2 + (y - 5)^2
+    Displaying the plot of the steps and the final value of w.
     """
     alpha = 0.1 # Learning rate
     steps = 1001 # Number of iterations, including the initial value.
@@ -78,10 +81,9 @@ def np_gradient_descent():
 def decision_tree_experiment(max_depth):
     """
     Experiment with the Decision Tree model. Training on the training dataset and testing on the test dataset.
-    The accuracies are printed for each combination of parameters. The best model is also printed.
+    The accuracies are printed for each combination of parameters.
 
-    :param max_depths: List of the maximum depths of the tree
-    :param max_leaf_nodes: List of the maximum number of leaf nodes
+    :param max_depths: Maximum depth of the tree
     """
     train_dataset, train_classes = read_data('train_multiclass.csv')
     validation_dataset, validation_classes = read_data('validation_multiclass.csv')
@@ -110,6 +112,14 @@ def evaluate_model(dataloader: torch.utils.data.DataLoader,
                    criterion: torch.nn.Module, 
                    device: torch.device):
     """
+    Running evaluation on a trained model using the given dataset.
+    Evaluation includes calculating the loss and the accuracy per batch.
+
+    :param dataloader: The dataloader for the dataset
+    :param model: The trained model
+    :param criterion: The loss function
+    :param device: The device to run the evaluation on
+    :return: The mean loss and the accuracy (tuple)
     """
     loss_values = []
     correct_preds = 0
@@ -140,13 +150,27 @@ def logistic_regression_sgd_classifier(
         decay_step_size: int,
         decay_rate: float):
     """
+    Training the logistic regression model using the SGD algorithm.
+    The model is trained on the training data and evaluated on the validation and test data.
+
+    :param epochs: The number of epochs to train the model
+    :param model: The model to train
+    :param learning_rate: The learning rate for the optimizer
+    :param train_data: The training dataset
+    :param validation_data: The validation dataset
+    :param test_data: The test dataset
+    :param decay_step_size: The step size for the learning rate scheduler
+    :param decay_rate: The decay rate for the learning rate scheduler
+    :return: The mean loss and the accuracy for the training, validation and test sets per epoch
+             (3 numpy arrays, each contains a 2d array mapping the epoch to the mean loss and accuracy)
     """
-    device = torch.device('cpu')#'cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
 
     optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate)
     criterion = torch.nn.CrossEntropyLoss()
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=decay_step_size, gamma=decay_rate)
+    lr_scheduler = torch.optim.lr_scheduler.StepLR(
+        optimizer, step_size=decay_step_size, gamma=decay_rate)
 
     # For each epoch we store the mean loss & accuracy for the training, validation and test sets
     train_results = np.empty(shape=(epochs, 2))
@@ -192,8 +216,23 @@ def logistic_regression_sgd_classifier(
 
     return train_results, validation_results, test_results
 
-def logistic_regression_sgd_full(dataset_paths, learning_rates, epochs, decay_step_size = 15, decay_rate = 0.3):
+def logistic_regression_sgd_full(
+        dataset_paths, learning_rates, epochs, decay_step_size = 15, decay_rate = 0.3):
     """
+    Running the full logistic regression experiment.
+    This includes training the model with the given learning rates
+    and determining the best model according to the validation accuracy.
+    Plots created:
+    - Decision boundaries of the best model
+    - Loss per epoch for the best model on each dataset
+    - Accuracy per epoch for the best model on each dataset
+    - Accuracy per learning rate for the validation and test datasets
+
+    :param dataset_paths: The paths for the training, validation and test datasets (in this order)
+    :param learning_rates: The learning rates to train the model with
+    :param epochs: The number of epochs to train the model
+    :param decay_step_size: The step size for the learning rate scheduler
+    :param decay_rate: The decay rate for the learning rate scheduler
     """
     # Constants
     batch_size = 32
@@ -286,6 +325,12 @@ def logistic_regression_sgd_full(dataset_paths, learning_rates, epochs, decay_st
         
 def ridge_regression_lambda_accuracy_plots(lambda_values):
     """
+    Running the Ridge Regression experiment with the given lambda values.
+    The accuracies are plotted for each dataset and the lambda values.
+    The best and worst lambda values are determined according to the validation accuracy.
+
+    :param lambda_values: The lambda values to run the experiment with
+    :return: The validation and test accuracies for each lambda value
     """
     train_set, train_classes = read_data('train.csv')
     validation_set, validation_classes = read_data('validation.csv')
@@ -326,6 +371,11 @@ def ridge_regression_lambda_accuracy_plots(lambda_values):
 
 def ridge_regression_prediction_plot(best_lambda, worst_lambda):
     """
+    Running the Ridge Regression experiment with the best and worst lambda values.
+    The decision boundaries are plotted for each model.
+
+    :param best_lambda: The best lambda value
+    :param worst_lambda: The worst lambda value
     """
     train_set, train_classes = read_data('train.csv')
     test_set, test_classes = read_data('test.csv')
