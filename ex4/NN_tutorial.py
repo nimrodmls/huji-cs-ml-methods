@@ -36,21 +36,15 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
         pred_correct = 0
         ep_loss = 0.
         for i, (inputs, labels) in enumerate(tqdm(trainloader)):
-            #### YOUR CODE HERE ####
-
             # perform a training iteration
+            inputs = inputs.to(device)
+            labels = labels.to(device)
 
-            # move the inputs and labels to the device
-            # zero the gradients
-            # forward pass
-            # calculate the loss
-            # backward pass
-            # update the weights
-
-            # name the model outputs "outputs"
-            # and the loss "loss"
-
-            #### END OF YOUR CODE ####
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
 
             pred_correct += (torch.argmax(outputs, dim=1) == labels).sum().item()
             ep_loss += loss.item()
@@ -65,18 +59,11 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
                 total = 0
                 ep_loss = 0.
                 for inputs, labels in loader:
-                    #### YOUR CODE HERE ####
-
                     # perform an evaluation iteration
-
-                    # move the inputs and labels to the device
-                    # forward pass
-                    # calculate the loss
-
-                    # name the model outputs "outputs"
-                    # and the loss "loss"
-
-                    #### END OF YOUR CODE ####
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
 
                     ep_loss += loss.item()
                     _, predicted = torch.max(outputs.data, 1)
@@ -91,6 +78,28 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
     return model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses
 
 
+def create_nn_model(output_dim):
+    model = [nn.Linear(2, 16), nn.ReLU(),  # hidden layer 1
+             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 2
+             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 3
+             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 4
+             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 5
+             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 6
+             nn.Linear(16, output_dim)  # output layer
+             ]
+    return nn.Sequential(*model)
+
+def create_nn_model_batchnorm(output_dim):
+    model = [nn.Linear(2, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 1
+             nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 2
+             nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 3
+             nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 4
+             nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 5
+             nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 6
+             nn.Linear(16, output_dim)  # output layer
+             ]
+    return nn.Sequential(*model)
+
 if __name__ == '__main__':
     # seed for reproducibility
     torch.manual_seed(0)
@@ -101,19 +110,22 @@ if __name__ == '__main__':
     test_data = pd.read_csv('test.csv')
 
     output_dim = len(train_data['country'].unique())
-    model = [nn.Linear(2, 16), nn.ReLU(),  # hidden layer 1
-             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 2
-             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 3
-             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 4
-             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 5
-             nn.Linear(16, 16), nn.ReLU(),  # hidden layer 6
-             nn.Linear(16, output_dim)  # output layer
-             ]
-    model = nn.Sequential(*model)
+    model = create_nn_model_batchnorm(output_dim)
 
-    model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, batch_size=256)
+    model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
+        train_model(
+            train_data, 
+            val_data, 
+            test_data, 
+            model, 
+            lr=0.001, 
+            #epochs=50, 
+            epochs=10,
+            batch_size=256)
 
     plt.figure()
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
     plt.plot(train_losses, label='Train', color='red')
     plt.plot(val_losses, label='Val', color='blue')
     plt.plot(test_losses, label='Test', color='green')
