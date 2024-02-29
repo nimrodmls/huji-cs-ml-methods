@@ -189,8 +189,13 @@ def logistic_regression_sgd_classifier(
 
             optimizer.zero_grad()
             preds = model(features)
+            # Calculating the loss - The criterion applies the softmax function
+            # by itself, to convert the predictions to probabilities, which in
+            # turn are used to calculate the emperical loss.
             loss = criterion(preds.squeeze(), labels)
+            # Calculating the gradients of the loss function
             loss.backward()
+            # Updating the weights
             optimizer.step()
 
             train_loss_values.append(loss.item())
