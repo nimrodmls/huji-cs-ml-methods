@@ -77,7 +77,6 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
 
     return model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses
 
-
 def create_nn_model(output_dim):
     model = [nn.Linear(2, 16), nn.ReLU(),  # hidden layer 1
              nn.Linear(16, 16), nn.ReLU(),  # hidden layer 2
@@ -100,45 +99,63 @@ def create_nn_model_batchnorm(output_dim):
              ]
     return nn.Sequential(*model)
 
-if __name__ == '__main__':
-    # seed for reproducibility
-    torch.manual_seed(0)
-    np.random.seed(0)
+def base_nn_experiment():
+    """
+    """
+    lr_to_color = {1: 'red', 0.1: 'blue', 0.01: 'green', 0.001: 'orange'}
 
     train_data = pd.read_csv('train.csv')
     val_data = pd.read_csv('validation.csv')
     test_data = pd.read_csv('test.csv')
 
     output_dim = len(train_data['country'].unique())
-    model = create_nn_model_batchnorm(output_dim)
-
-    model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
-        train_model(
-            train_data, 
-            val_data, 
-            test_data, 
-            model, 
-            lr=0.001, 
-            #epochs=50, 
-            epochs=10,
-            batch_size=256)
 
     plt.figure()
+    for lr in lr_to_color.keys():
+        print(f'\nRunning experiment for LR {lr}')
+        model = create_nn_model(output_dim)
+        model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
+            train_model(
+                train_data, 
+                val_data, 
+                test_data, 
+                model, 
+                lr=lr, 
+                epochs=10, 
+                batch_size=256)
+        
+        plt.plot(val_losses, label=f'LR {lr}', color=lr_to_color[lr])
+
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.plot(train_losses, label='Train', color='red')
-    plt.plot(val_losses, label='Val', color='blue')
-    plt.plot(test_losses, label='Test', color='green')
-    plt.title('Losses')
+    plt.title('Losses per Epoch - Validation Set')
     plt.legend()
     plt.show()
+    
 
-    plt.figure()
-    plt.plot(train_accs, label='Train', color='red')
-    plt.plot(val_accs, label='Val', color='blue')
-    plt.plot(test_accs, label='Test', color='green')
-    plt.title('Accs.')
-    plt.legend()
-    plt.show()
+if __name__ == '__main__':
+    # seed for reproducibility
+    torch.manual_seed(42)
+    np.random.seed(42)
 
-    plot_decision_boundaries(model, test_data[['long', 'lat']].values, test_data['country'].values, 'Decision Boundaries', implicit_repr=False)
+    base_nn_experiment()
+
+    # plt.figure()
+    # plt.xlabel('Epoch')
+    # plt.ylabel('Loss')
+    # plt.plot(train_losses, label='Train', color='red')
+    # plt.plot(val_losses, label='Val', color='blue')
+    # plt.plot(test_losses, label='Test', color='green')
+    # plt.title('Losses')
+    # plt.legend()
+    # plt.show()
+
+    # plt.figure()
+    # plt.plot(train_accs, label='Train', color='red')
+    # plt.plot(val_accs, label='Val', color='blue')
+    # plt.plot(test_accs, label='Test', color='green')
+    # plt.title('Accs.')
+    # plt.legend()
+    # plt.show()
+
+    # plot_decision_boundaries(model, test_data[['long', 'lat']].values, test_data['country'].values, 'Decision Boundaries', implicit_repr=False)
