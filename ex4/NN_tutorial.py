@@ -92,7 +92,7 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
 
         model.eval()
         with torch.no_grad():
-            current_time = 0
+            current_time = times.time()
             for loader, accs, losses, times in zip([valloader, testloader], [val_accs, test_accs], [val_losses, test_losses], [val_times, test_times]):
                 correct = 0
                 total = 0
@@ -256,6 +256,14 @@ def base_nn_batchsize_experiment():
     plt.title(f'Test times per Epoch - Test Set, pairs of (batchsize, epochs)')
     plt.legend()
     plt.show()
+
+    time_sums = [np.sum(test_times) for test_times in all_test_times]
+    fig, ax = plt.subplots()
+    ax.scatter(range(len(all_test_times)), time_sums)
+    for idx, pairing in enumerate(epoch_batchsize_pairings):
+        ax.annotate(f'({pairing["batch_size"]},{pairing["epochs"]})', (idx, time_sums[idx]))
+    plt.ylabel('Total Time')
+    plt.xlabel('Pairing Index')
 
     plt.figure()
     for idx, test_losses in enumerate(all_test_losses):
