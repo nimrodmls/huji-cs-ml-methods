@@ -39,10 +39,11 @@ def create_custom_network(depth, width, input_dim, output_dim):
     """
     model = [nn.Linear(input_dim, width), nn.ReLU()]
     # Adding hidden layers
-    model += [chain.from_iterable(nn.Linear(width, width), nn.ReLU()) for i in range(depth)]
+    for i in range(depth):
+        model += [nn.Linear(width, width), nn.ReLU()]
     # Adding output layer
     model.append(nn.Linear(width, output_dim))
-    return model
+    return nn.Sequential(*model)
 
 def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, batch_size=256):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -66,8 +67,6 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
     train_losses = []
     val_losses = []
     test_losses = []
-    val_times = []
-    test_times = []
 
     for ep in range(epochs):
         model.train()
@@ -92,8 +91,7 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
 
         model.eval()
         with torch.no_grad():
-            current_time = times.time()
-            for loader, accs, losses, times in zip([valloader, testloader], [val_accs, test_accs], [val_losses, test_losses], [val_times, test_times]):
+            for loader, accs, losses in zip([valloader, testloader], [val_accs, test_accs], [val_losses, test_losses]):
                 correct = 0
                 total = 0
                 ep_loss = 0.
@@ -111,20 +109,17 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
 
                 accs.append(correct / total)
                 losses.append(ep_loss / len(loader))
-                # Documenting the time delta for each epoch
-                times.append(time.time() - current_time)
-                current_time = time.time()
 
         print('Epoch {:}, Train Acc: {:.3f}, Val Acc: {:.3f}, Test Acc: {:.3f}'.format(ep, train_accs[-1], val_accs[-1], test_accs[-1]))
 
-    return model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses, val_times, test_times
+    return model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses
 
 ## Experiments
 
 def base_nn_multi_lr_experiment(isBatchnorm=False):
     """
     """
-    lr_to_color = {1: 'red', 0.1: 'blue', 0.01: 'green', 0.001: 'orange'}
+    lr_to_color = {1: 'red', 0.01: 'blue', 0.001: 'green', 0.00001: 'orange'}
 
     train_data = pd.read_csv('train.csv')
     val_data = pd.read_csv('validation.csv')
@@ -141,7 +136,7 @@ def base_nn_multi_lr_experiment(isBatchnorm=False):
         else:
             model = create_nn_model(output_dim)
         
-        model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses, _, _ = \
+        model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
             train_model(
                 train_data, 
                 val_data, 
@@ -155,9 +150,10 @@ def base_nn_multi_lr_experiment(isBatchnorm=False):
 
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title('Losses per Epoch - Validation Set')
+    plt.title(f'Losses per Epoch - Validation Set - Batchnorm: {isBatchnorm}')
     plt.legend()
-    plt.show()
+    plt.savefig(f'multi_lr_loss_per_epoch_bn_{isBatchnorm}.pdf')
+    #plt.show()
 
 def base_nn_epoch_sampling_experiment(isBatchnorm=False):
     """
@@ -169,15 +165,15 @@ def base_nn_epoch_sampling_experiment(isBatchnorm=False):
     output_dim = len(train_data['country'].unique())
 
     lr = 0.001
-    total_epochs = 10
-    epoch_samples = [0, 4, 9]#, 19, 49, 99]
+    total_epochs = 100
+    epoch_samples = [0, 4, 9, 19, 49, 99]
 
     if isBatchnorm:
         model = create_nn_model_batchnorm(output_dim)
     else:
         model = create_nn_model(output_dim)
 
-    model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses, _, _ = \
+    model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
         train_model(
             train_data, 
             val_data, 
@@ -194,8 +190,9 @@ def base_nn_epoch_sampling_experiment(isBatchnorm=False):
     plt.xlabel('Epoch')
     plt.xticks(epoch_samples)
     plt.ylabel('Loss')
-    plt.title(f'Losses per Epoch, Sampling - Validation Set, LR {lr}')
-    plt.show()
+    plt.title(f'Losses per Epoch, Sampling - Validation Set, LR {lr}, Batchnorm: {isBatchnorm}')
+    plt.savefig(f'epoch_sampling_loss_per_epoch_bn_{isBatchnorm}.pdf')
+    #plt.show()
     
 def batchnorm_nn_experiment():
     """
@@ -219,7 +216,6 @@ def base_nn_batchsize_experiment():
                              {'batch_size': 128, 'epochs': 50, 'color': 'orange'}, 
                              {'batch_size': 1024, 'epochs': 50, 'color': 'red'}]
     
-    all_test_times = []
     all_test_losses = []
     all_test_accs = []
     for exper in epoch_batchsize_pairings:
@@ -227,7 +223,7 @@ def base_nn_batchsize_experiment():
         batch_size = exper['batch_size']
         print(f'\nRunning experiment: batchsize {batch_size}, epochs {epochs}')
         model = create_nn_model(output_dim)
-        model, _, _, test_accs, _, _, test_losses, _, test_times = \
+        model, _, _, test_accs, _, _, test_losses = \
             train_model(
                 train_data, 
                 val_data, 
@@ -236,35 +232,9 @@ def base_nn_batchsize_experiment():
                 lr=lr, 
                 epochs=epochs, 
                 batch_size=batch_size)
-        all_test_times.append(test_times)
         all_test_losses.append(test_losses)
         all_test_accs.append(test_accs)
         
-    plt.figure()
-    for idx, test_times in enumerate(all_test_times):
-        plt.scatter(
-            [0, epoch_batchsize_pairings[idx]["epochs"]-1], 
-            [test_times[0], test_times[-1]],
-            color=epoch_batchsize_pairings[idx]["color"])
-        plt.plot(
-            test_times, 
-            label=f'({epoch_batchsize_pairings[idx]["batch_size"]},{epoch_batchsize_pairings[idx]["epochs"]})',
-            color=epoch_batchsize_pairings[idx]["color"])
-        
-    plt.xlabel('Epoch')
-    plt.ylabel('Time Delta')
-    plt.title(f'Test times per Epoch - Test Set, pairs of (batchsize, epochs)')
-    plt.legend()
-    plt.show()
-
-    time_sums = [np.sum(test_times) for test_times in all_test_times]
-    fig, ax = plt.subplots()
-    ax.scatter(range(len(all_test_times)), time_sums)
-    for idx, pairing in enumerate(epoch_batchsize_pairings):
-        ax.annotate(f'({pairing["batch_size"]},{pairing["epochs"]})', (idx, time_sums[idx]))
-    plt.ylabel('Total Time')
-    plt.xlabel('Pairing Index')
-
     plt.figure()
     for idx, test_losses in enumerate(all_test_losses):
         plt.scatter(
@@ -280,7 +250,8 @@ def base_nn_batchsize_experiment():
     plt.ylabel('Loss')
     plt.title(f'Losses per Epoch - Test Set, pairs of (batchsize, epochs)')
     plt.legend()
-    plt.show()
+    plt.savefig('batchsize_loss_per_epoch.pdf')
+    #plt.show()
 
     plt.figure()
     for idx, test_accs in enumerate(all_test_accs):
@@ -297,8 +268,85 @@ def base_nn_batchsize_experiment():
     plt.ylabel('Accuracy')
     plt.title(f'Accuracy per Epoch - Test Set, pairs of (batchsize, epochs)')
     plt.legend()
-    plt.show()
+    plt.savefig('batchsize_acc_per_epoch.pdf')
+    #plt.show()
 
+def varied_model_parameters_experiment():
+    """
+    """
+    train_data = pd.read_csv('train.csv')
+    val_data = pd.read_csv('validation.csv')
+    test_data = pd.read_csv('test.csv')
+
+    input_dim = 2
+    output_dim = len(train_data['country'].unique())
+    # Tuples of (depth, width, epochs, batch_size, lr, plot_color)
+    models_base_params = [
+        (1, 16, 50, 128, 0.001, 'blue'),
+
+       #(2, 16, 50, 64, 0.001, 'blue'),
+
+        #(6, 16, 50, 128, 0.001, 'green'),
+
+        #(10, 16, 100, 128, 0.001, 'green'),
+
+        #(6, 8, 50, 128, 0.001, 'pink'),
+
+        #(6, 32, 50, 128, 0.001, 'cyan'),
+        
+        #(6, 64, 50, 128, 0.001, 'pink')
+    ]
+
+    # Create the base models
+    all_val_losses = []
+    all_val_accs = []
+    for depth, width, epochs, batch_size, lr, plot_color in models_base_params:
+        model = create_custom_network(depth, width, input_dim, output_dim)
+        
+        model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
+            train_model(
+                train_data, 
+                val_data, 
+                test_data, 
+                model, 
+                lr=lr, 
+                epochs=epochs, 
+                batch_size=batch_size)
+        
+        all_val_losses.append(val_losses)
+        all_val_accs.append(val_accs)
+
+        # plot_decision_boundaries(
+        #     model, 
+        #     test_data[['long', 'lat']].values, 
+        #     test_data['country'].values, 
+        #     'Decision Boundaries', 
+        #     implicit_repr=False)
+        
+    # Plotting the validation loss
+    plt.figure()
+    for (depth, width, epochs, batch_size, lr, plot_color), val_losses in zip(models_base_params, all_val_losses):
+        plt.plot(val_losses, label=f'({depth},{width})', color=plot_color)
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.title('Validation Loss per Epoch')
+    plt.savefig('varied_val_loss_per_epoch.pdf')
+    #plt.show()
+
+    # Plotting the validation accuracy
+    plt.figure()
+    for (depth, width, epochs, batch_size, lr, plot_color), val_accs in zip(models_base_params, all_val_accs):
+        plt.plot(val_accs, label=f'({depth},{width})', color=plot_color)
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Accuracy')
+    plt.title('Validation Accuracy per Epoch')
+    plt.savefig('varied_val_acc_per_epoch.pdf')
+    #plt.show()
+
+
+        
 if __name__ == '__main__':
     # seed for reproducibility
     torch.manual_seed(42)
@@ -307,14 +355,16 @@ if __name__ == '__main__':
     # Q6.1.2.1 - Basic NN with multiple learning rates
     #base_nn_multi_lr_experiment()
 
-    # Q6.1.2.2 - Basic NN, LR 0.01, with different epoch sampling
+    # Q6.1.2.2 - Basic NN, LR 0.001, with different epoch sampling
     #base_nn_epoch_sampling_experiment()
 
     # Q6.1.2.3 - Basic NN with batchnorm, for both experiments
     #batchnorm_nn_experiment()
 
     # Q6.1.2.4 - Basic NN with different batch sizes
-    base_nn_batchsize_experiment()
+    #base_nn_batchsize_experiment()
+
+    varied_model_parameters_experiment()
 
     # plt.figure()
     # plt.xlabel('Epoch')

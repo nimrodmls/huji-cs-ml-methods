@@ -17,7 +17,7 @@ class ResNet18(nn.Module):
         else:
             self.transform = transforms.Compose([transforms.Resize((224, 224)), transforms.ToTensor()])
             self.resnet18 = resnet18()
-	in_features_dim = self.resnet18.fc.in_features
+        in_features_dim = self.resnet18.fc.in_features
         self.resnet18.fc = nn.Identity()
         if probing:
             for name, param in self.resnet18.named_parameters():
