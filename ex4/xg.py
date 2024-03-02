@@ -31,7 +31,7 @@ np.random.seed(0)
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 transform = transforms.Compose([transforms.Resize((224, 224)), transforms.CenterCrop(64), transforms.ToTensor()])
 batch_size = 32
-path = 'PATH_TO_whicfaceisreal' # For example '/cs/usr/username/whichfaceisreal/'
+path = 'C:\Temp\whichfaceisreal'
 train_loader, val_loader, test_loader = get_loaders(path, transform, batch_size)
 
 
@@ -55,5 +55,9 @@ with torch.no_grad():
 ### DO NOT CHANGE THE CODE ABOVE THIS LINE ###
 
 
-### YOUR XGBOOST CODE GOES HERE ###
+classifier = XGBClassifier()
+classifier.fit(train_data, train_labels)
+preds = classifier.predict(test_data)
+accuracy = (preds == test_labels).mean()
+print(f'Accuracy: {accuracy:.2f}')
 

@@ -26,8 +26,7 @@ class ResNet18(nn.Module):
 
     def forward(self, x):
         features = self.resnet18(x)
-        ### YOUR CODE HERE ###
-        pass
+        return self.logistic_regression(features)
 
 def get_loaders(path, transform, batch_size):
     """
@@ -55,7 +54,20 @@ def compute_accuracy(model, data_loader, device):
     :return: The accuracy of the model on the data in data_loader
     """
     model.eval()
-    ### YOUR CODE HERE ###
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for inputs, labels in data_loader:
+            # perform an evaluation iteration
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+
+            _, predicted = torch.max(outputs.data, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+
+    return correct / total
 
 def run_training_epoch(model, criterion, optimizer, train_loader, device):
     """
@@ -68,9 +80,21 @@ def run_training_epoch(model, criterion, optimizer, train_loader, device):
     :return: The average loss for the epoch.
     """
     model.train()
+    ep_loss = 0
     for (imgs, labels) in tqdm(train_loader, total=len(train_loader)):
-        ### YOUR CODE HERE ###
-        return
+            # perform a training iteration
+            imgs = imgs.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            outputs = model(imgs)
+            loss = criterion(outputs.squeeze(), labels.float())
+            loss.backward()
+            optimizer.step()
+
+            ep_loss += loss.item()
+
+    return ep_loss / len(train_loader)
 
 # Set the random seed for reproducibility
 torch.manual_seed(0)
@@ -85,9 +109,9 @@ model = ResNet18(pretrained=False, probing=False)
 
 transform = model.transform
 batch_size = 32
-num_of_epochs = 50
+num_of_epochs = 1
 learning_rate = 0.0001
-path = 'PATH_TO_whicfaceisreal' # For example '/cs/usr/username/whichfaceisreal/'
+path = 'C:\Temp\whichfaceisreal'
 train_loader, val_loader, test_loader = get_loaders(path, transform, batch_size)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -107,7 +131,6 @@ for epoch in range(num_of_epochs):
     val_acc = compute_accuracy(model, val_loader, device)
     print(f'Epoch {epoch + 1}/{num_of_epochs}, Loss: {loss:.4f}, Val accuracy: {val_acc:.4f}')
     # Stopping condition
-    ### YOUR CODE HERE ###
 
 # Compute the test accuracy
 test_acc = compute_accuracy(model, test_loader, device)
