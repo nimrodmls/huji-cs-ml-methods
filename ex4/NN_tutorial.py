@@ -45,7 +45,17 @@ def create_custom_network(depth, width, input_dim, output_dim):
     model.append(nn.Linear(width, output_dim))
     return nn.Sequential(*model)
 
-def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, batch_size=256):
+def calculate_grad_magnitudes_layer(model, epoch, grad_magnitudes):
+    """
+    """
+    # grad_magnitudes has lists as number of epochs, for each epoch the list contains the averge gradient magnitudes for each hidden layer
+    layers = list(model)[2:-1][::2]
+    for idx, layer in enumerate(layers):
+        grad_magnitudes[epoch][idx].append((
+            torch.pow(torch.norm(layer.weight.grad), 2) +
+            torch.pow(torch.norm(layer.bias.grad), 2)).cpu().numpy())
+
+def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, batch_size=256, callback=None):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print('Using device:', device)
@@ -81,6 +91,8 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+            if callback:
+                callback(model, ep)
             optimizer.step()
 
             pred_correct += (torch.argmax(outputs, dim=1) == labels).sum().item()
@@ -345,7 +357,48 @@ def varied_model_parameters_experiment():
     plt.savefig('varied_val_acc_per_epoch.pdf')
     #plt.show()
 
+def monitoring_gradients_experiment():
+    """
+    """
+    epochs = 10
+    hidden_layers = 100
+    layer_width = 4
 
+    train_data = pd.read_csv('train.csv')
+    val_data = pd.read_csv('validation.csv')
+    test_data = pd.read_csv('test.csv')
+
+    input_dim = 2
+    output_dim = len(train_data['country'].unique())
+
+    model = create_custom_network(hidden_layers, layer_width, input_dim, output_dim)
+    grad_magnitudes = [[[] for _ in range(hidden_layers)] for _ in range(epochs)]
+    
+    model, _, _, _, _, _, _ = \
+        train_model(
+            train_data, 
+            val_data, 
+            test_data, 
+            model, 
+            lr=0.001, 
+            epochs=epochs, 
+            batch_size=128,
+            callback=lambda model, epoch: calculate_grad_magnitudes_layer(
+                                                        model, epoch, grad_magnitudes))
+    
+    layer_to_color = {0: 'red', 30: 'blue', 60: 'green', 90: 'orange', 95: 'pink', 99: 'cyan'}
+
+    plt.figure()
+    for layer_sample in layer_to_color.keys():
+        mean_grad_magnitudes = []
+        for epoch in range(epochs):
+            mean_grad_magnitudes.append(np.mean(grad_magnitudes[epoch][layer_sample]))
+        plt.plot(mean_grad_magnitudes, color=layer_to_color[layer_sample], label=f'Layer {layer_sample}')
+    plt.xlabel('Epoch')
+    plt.ylabel('Average Gradient Magnitude')
+    plt.title('Average Gradient Magnitude per Epoch')
+    plt.legend()
+    plt.show()
         
 if __name__ == '__main__':
     # seed for reproducibility
@@ -364,7 +417,9 @@ if __name__ == '__main__':
     # Q6.1.2.4 - Basic NN with different batch sizes
     #base_nn_batchsize_experiment()
 
-    varied_model_parameters_experiment()
+    #varied_model_parameters_experiment()
+
+    monitoring_gradients_experiment()
 
     # plt.figure()
     # plt.xlabel('Epoch')
