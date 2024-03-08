@@ -6,8 +6,10 @@ import torchvision
 from tqdm import tqdm
 from torchvision import transforms
 import numpy as np
+import matplotlib.pyplot as plt
 
 class ResNet18(nn.Module):
+
     def __init__(self, pretrained=False, probing=False):
         super(ResNet18, self).__init__()
         if pretrained:
@@ -55,7 +57,6 @@ def compute_accuracy(model, data_loader, device):
     """
     model.eval()
     correct = 0
-    total = 0
     with torch.no_grad():
         for inputs, labels in data_loader:
             # perform an evaluation iteration
@@ -63,11 +64,10 @@ def compute_accuracy(model, data_loader, device):
             labels = labels.to(device)
             outputs = model(inputs)
 
-            _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
+            predicted = (outputs.data > 0).float()
+            correct += (predicted.squeeze() == labels.float()).sum().item()
 
-    return correct / total
+    return correct / len(data_loader.dataset)
 
 def run_training_epoch(model, criterion, optimizer, train_loader, device):
     """
@@ -94,45 +94,78 @@ def run_training_epoch(model, criterion, optimizer, train_loader, device):
 
             ep_loss += loss.item()
 
-    return ep_loss / len(train_loader)
+    return ep_loss / len(train_loader.dataset)
 
-# Set the random seed for reproducibility
-torch.manual_seed(0)
+def run_for_model(lr, model):
+    """
+    Train the model and return the test accuracy
+    """
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    model = model.to(device)
 
-### UNCOMMENT THE FOLLOWING LINES TO TRAIN THE MODEL ###
-# From Scratch
-model = ResNet18(pretrained=False, probing=False)
-# Linear probing
-# model = ResNet18(pretrained=True, probing=True)
-# Fine-tuning
-# model = ResNet18(pretrained=True, probing=False)
+    transform = model.transform
+    batch_size = 32
+    num_of_epochs = 1
+    
+    path = 'C:\Temp\whichfaceisreal'
+    train_loader, val_loader, test_loader = get_loaders(path, transform, batch_size)
 
-transform = model.transform
-batch_size = 32
-num_of_epochs = 1
-learning_rate = 0.0001
-path = 'C:\Temp\whichfaceisreal'
-train_loader, val_loader, test_loader = get_loaders(path, transform, batch_size)
+    ### Define the loss function and the optimizer
+    criterion = torch.nn.BCEWithLogitsLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    ### Train the model
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-model = model.to(device)
-### Define the loss function and the optimizer
-criterion = torch.nn.BCEWithLogitsLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-### Train the model
+    # Train the model
+    for epoch in range(num_of_epochs):
+        # Run a training epoch
+        loss = run_training_epoch(model, criterion, optimizer, train_loader, device)
+        # Compute the accuracy
+        train_acc = compute_accuracy(model, train_loader, device)
+        # Compute the validation accuracy
+        val_acc = compute_accuracy(model, val_loader, device)
+        print(f'Epoch {epoch + 1}/{num_of_epochs}, Loss: {loss:.4f}, Val accuracy: {val_acc:.4f}')
+        # Stopping condition
 
-# Train the model
-for epoch in range(num_of_epochs):
-    # Run a training epoch
-    loss = run_training_epoch(model, criterion, optimizer, train_loader, device)
-    # Compute the accuracy
-    train_acc = compute_accuracy(model, train_loader, device)
-    # Compute the validation accuracy
-    val_acc = compute_accuracy(model, val_loader, device)
-    print(f'Epoch {epoch + 1}/{num_of_epochs}, Loss: {loss:.4f}, Val accuracy: {val_acc:.4f}')
-    # Stopping condition
+    # Compute the test accuracy
+    return compute_accuracy(model, test_loader, device)
 
-# Compute the test accuracy
-test_acc = compute_accuracy(model, test_loader, device)
+def baselines_experiment():
+    """
+    """
+    models = [('Linear Probing', 'blue'), ('Fine-tuning', 'green'), ('From Scratch', 'red')]
+    learning_rates = [0.00001, 0.0001, 0.001, 0.01, 0.1]
+    
+    plt.figure()
+    plt.xlabel('Learning Rate')
+    plt.ylabel('Test Accuracy')
+    for description, plt_color in models:
+        test_accuracies = []
+        for lr in learning_rates:
+            if description == 'Linear Probing':
+                model = ResNet18(pretrained=True, probing=True)
+            elif description == 'Fine-tuning':
+                model = ResNet18(pretrained=True, probing=False)
+            elif description == 'From Scratch':
+                model = ResNet18(pretrained=False, probing=False)
+            else:
+                raise ValueError('Invalid model baseline')
+            print(f'Running for learning rate: {lr} for {description} model.')
+            test_accuracy = run_for_model(lr, model)
+            test_accuracies.append(test_accuracy)
 
+        print(f'Best 2 learning rates: {learning_rates[np.argmax(test_accuracies)]} & {learning_rates[np.argsort(test_accuracies)[-2]]} for {description} model.')
+        print(f'Worst learning rate: {learning_rates[np.argmin(test_accuracies)]} for {description} model.')
+        print(test_accuracies)
+        plt.plot([f'{lr}' for lr in learning_rates], test_accuracies, label=description, color=plt_color)
+        plt.scatter([f'{lr}' for lr in learning_rates], test_accuracies, color=plt_color)
+    
+    plt.xticks([f'{lr}' for lr in learning_rates])
+    plt.legend()
+    plt.show()
 
+if __name__ == '__main__':
+    # Set the random seed for reproducibility
+    torch.manual_seed(0)
+
+    # Q7.4.1
+    baselines_experiment()
