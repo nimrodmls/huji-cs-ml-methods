@@ -4,8 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
-import time
-from itertools import chain
 
 from helpers import *
 
@@ -283,6 +281,40 @@ def base_nn_batchsize_experiment():
     plt.savefig('batchsize_acc_per_epoch.pdf')
     #plt.show()
 
+def depth_of_network_experiment(mlp_depth_to_acc):
+    """
+    :param mlp_depth_to_acc: A dictionary with the depth of the network as 
+                             keys and the accuracies (train, validation, test) as values
+    """
+    colors = ['red', 'blue', 'green', 'orange', 'pink', 'cyan', 'purple']
+    fig, ax = plt.subplots()
+    for idx, (depth, accs) in enumerate(mlp_depth_to_acc.items()):
+        ax.scatter([depth]*3, accs, label=f'Depth {depth}', color=colors[idx])
+        for acc, desc in zip(accs, ['train', 'validation', 'test']):
+            ax.annotate(f'{desc}', (depth, acc))        
+    plt.legend()
+    plt.xlabel('Depth')
+    plt.ylabel('Accuracy')
+    plt.title(f'Accuracy per Depth - Width 16 MLPs')
+    plt.show()
+
+def width_of_network_experiment(mlp_width_to_acc):
+    """
+    :param mlp_width_to_acc: A dictionary with the width of the network as 
+                             keys and the accuracies (train, validation, test) as values
+    """
+    colors = ['red', 'blue', 'green', 'orange', 'pink', 'cyan', 'purple']
+    fig, ax = plt.subplots()
+    for idx, (width, accs) in enumerate(mlp_width_to_acc.items()):
+        ax.scatter([width]*3, accs, label=f'Depth {width}', color=colors[idx])
+        for acc, desc in zip(accs, ['train', 'validation', 'test']):
+            ax.annotate(f'{desc}', (width, acc))        
+    plt.legend()
+    plt.xlabel('Width')
+    plt.ylabel('Accuracy')
+    plt.title(f'Accuracy per Width - Depth 6 MLPs')
+    plt.show()
+
 def varied_model_parameters_experiment():
     """
     """
@@ -295,25 +327,25 @@ def varied_model_parameters_experiment():
     # Tuples of (depth, width, epochs, batch_size, lr, plot_color)
     models_base_params = [
         (1, 16, 50, 128, 0.001, 'blue'),
-
-       #(2, 16, 50, 64, 0.001, 'blue'),
-
-        #(6, 16, 50, 128, 0.001, 'green'),
-
-        #(10, 16, 100, 128, 0.001, 'green'),
-
-        #(6, 8, 50, 128, 0.001, 'pink'),
-
-        #(6, 32, 50, 128, 0.001, 'cyan'),
-        
-        #(6, 64, 50, 128, 0.001, 'pink')
+        (2, 16, 50, 128, 0.001, 'orange'),
+        (6, 16, 50, 128, 0.001, 'red'),
+        (10, 16, 100, 128, 0.001, 'green'),
+        (6, 8, 50, 128, 0.001, 'pink'),
+        (6, 32, 50, 128, 0.001, 'cyan'),
+        (6, 64, 50, 128, 0.001, 'purple')
     ]
 
     # Create the base models
-    all_val_losses = []
+    models = []
+    all_train_accs = []
     all_val_accs = []
+    all_test_accs = []
+    all_train_losses = []
+    all_val_losses = []
+    all_test_losses = []
     for depth, width, epochs, batch_size, lr, plot_color in models_base_params:
         model = create_custom_network(depth, width, input_dim, output_dim)
+        models.append(model)
         
         model, train_accs, val_accs, test_accs, train_losses, val_losses, test_losses = \
             train_model(
@@ -325,37 +357,84 @@ def varied_model_parameters_experiment():
                 epochs=epochs, 
                 batch_size=batch_size)
         
+        all_train_losses.append(train_losses)
         all_val_losses.append(val_losses)
-        all_val_accs.append(val_accs)
+        all_test_losses.append(test_losses)
 
-        # plot_decision_boundaries(
-        #     model, 
-        #     test_data[['long', 'lat']].values, 
-        #     test_data['country'].values, 
-        #     'Decision Boundaries', 
-        #     implicit_repr=False)
+        all_train_accs.append(train_accs)
+        all_val_accs.append(val_accs)
+        all_test_accs.append(test_accs)
+
+    # Taking the best model according to the validation accuracy
+    best_model_idx = np.argmax([val_accs[-1] for val_accs in all_val_accs])
+    best_model_params = models_base_params[best_model_idx]
+    best_model = models[best_model_idx]
+    print(f'Best model according to validation accuracy: {best_model_params}')
+
+    # Taking the worst model according to the validation accuracy
+    worst_model_idx = np.argmin([val_accs[-1] for val_accs in all_val_accs])
+    worst_model_params = models_base_params[worst_model_idx]
+    worst_model = models[worst_model_idx]
+    print(f'Worst model according to validation accuracy: {worst_model_params}')
+
+    # Q6.2.1.2 - Best model
+    # Plotting the decision boundaries for the best model
+    plot_decision_boundaries(
+        best_model, 
+        test_data[['long', 'lat']].values, 
+        test_data['country'].values, 
+        f'Decision Boundaries - NN Best Model ({best_model_params[0]},{best_model_params[1]})', 
+        implicit_repr=False)
         
     # Plotting the validation loss
     plt.figure()
-    for (depth, width, epochs, batch_size, lr, plot_color), val_losses in zip(models_base_params, all_val_losses):
-        plt.plot(val_losses, label=f'({depth},{width})', color=plot_color)
+    plt.plot(all_train_losses[best_model_idx], label='Train', color='green')
+    plt.plot(all_val_losses[best_model_idx], label='Validation', color='blue')
+    plt.plot(all_test_losses[best_model_idx], label='Test', color='red')
     plt.legend()
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
-    plt.title('Validation Loss per Epoch')
-    plt.savefig('varied_val_loss_per_epoch.pdf')
-    #plt.show()
+    plt.title(f'Loss per Epoch - Best Model ({best_model_params[0]},{best_model_params[1]})')
+    #plt.savefig('best_varied_val_loss_per_epoch.pdf')
+    plt.show()
 
-    # Plotting the validation accuracy
+    # Q6.2.1.2 - Worst model
+    # Plotting the decision boundaries for the worst model
+    plot_decision_boundaries(
+        worst_model, 
+        test_data[['long', 'lat']].values, 
+        test_data['country'].values, 
+        f'Decision Boundaries - NN Worst Model ({worst_model_params[0]},{worst_model_params[1]})', 
+        implicit_repr=False)
+        
+    # Plotting the validation loss
     plt.figure()
-    for (depth, width, epochs, batch_size, lr, plot_color), val_accs in zip(models_base_params, all_val_accs):
-        plt.plot(val_accs, label=f'({depth},{width})', color=plot_color)
+    plt.plot(all_train_losses[worst_model_idx], label='Train', color='green')
+    plt.plot(all_val_losses[worst_model_idx], label='Validation', color='blue')
+    plt.plot(all_test_losses[worst_model_idx], label='Test', color='red')
     plt.legend()
     plt.xlabel('Epoch')
-    plt.ylabel('Accuracy')
-    plt.title('Validation Accuracy per Epoch')
-    plt.savefig('varied_val_acc_per_epoch.pdf')
-    #plt.show()
+    plt.ylabel('Loss')
+    plt.title(f'Loss per Epoch - Worst Model ({worst_model_params[0]},{worst_model_params[1]})')
+    #plt.savefig('worst_varied_val_loss_per_epoch.pdf')
+    plt.show()
+
+    # Q6.2.1.3 - Depth of network experiment
+    dest = {}
+    for idx, model_params in enumerate(models_base_params):
+        if model_params[1] != 16:
+            continue
+        dest[model_params[0]] = (all_train_accs[idx][-1], all_val_accs[idx][-1], all_test_accs[idx][-1])
+
+    depth_of_network_experiment(dest)
+
+    # Q6.2.1.4 - Width of network experiment
+    dest = {}
+    for idx, model_params in enumerate(models_base_params):
+        if model_params[0] != 6:
+            continue
+        dest[model_params[1]] = (all_train_accs[idx][-1], all_val_accs[idx][-1], all_test_accs[idx][-1])
+    width_of_network_experiment(dest)
 
 def monitoring_gradients_experiment():
     """
@@ -405,6 +484,8 @@ if __name__ == '__main__':
     torch.manual_seed(42)
     np.random.seed(42)
 
+    # NOTE TO GRADER: Remove comments to run the experiments
+
     # Q6.1.2.1 - Basic NN with multiple learning rates
     #base_nn_multi_lr_experiment()
 
@@ -417,26 +498,8 @@ if __name__ == '__main__':
     # Q6.1.2.4 - Basic NN with different batch sizes
     #base_nn_batchsize_experiment()
 
+    # Q6.2.1.(1-4) - Varied model parameters experiment
     #varied_model_parameters_experiment()
 
+    # Q6.2.1.5 - Monitoring gradients experiment
     monitoring_gradients_experiment()
-
-    # plt.figure()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.plot(train_losses, label='Train', color='red')
-    # plt.plot(val_losses, label='Val', color='blue')
-    # plt.plot(test_losses, label='Test', color='green')
-    # plt.title('Losses')
-    # plt.legend()
-    # plt.show()
-
-    # plt.figure()
-    # plt.plot(train_accs, label='Train', color='red')
-    # plt.plot(val_accs, label='Val', color='blue')
-    # plt.plot(test_accs, label='Test', color='green')
-    # plt.title('Accs.')
-    # plt.legend()
-    # plt.show()
-
-    # plot_decision_boundaries(model, test_data[['long', 'lat']].values, test_data['country'].values, 'Decision Boundaries', implicit_repr=False)
