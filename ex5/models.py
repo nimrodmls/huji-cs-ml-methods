@@ -35,7 +35,7 @@ class MySelfAttention(nn.Module):
         k_t = torch.transpose(k, 1, 2)
 
         # Normalizing and computing the attention score
-        normalized = F.softmax(torch.bmm(q, k_t) / torch.sqrt(self.input_dim))
+        normalized = torch.softmax(torch.bmm(q, k_t) / torch.sqrt(torch.tensor(self.input_dim)), dim=-1)
         return torch.bmm(normalized, v)
 
 class MyLayerNorm(nn.Module):
@@ -57,9 +57,10 @@ class MyLayerNorm(nn.Module):
         """
         # Compute the mean and variance for every element in the batch
         mean = x.mean(dim=(1, 2), keepdim=True)
-        # Not taking regard of the correction, computing the variance as 
+        # Not taking regard of the correction, computing the variance as `
         # described in the assignment
         variance = x.var(dim=(1, 2), correction=0, keepdim=True)
+        #variance2 = ((x - mean) ** 2).mean(dim=(1,2), keepdim=True)
         return (self.gamma * ((x - mean) / torch.sqrt(variance + self.eps))) + self.beta
 
 class MyTransformerBlock(nn.Module):

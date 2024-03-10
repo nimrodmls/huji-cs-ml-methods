@@ -1,6 +1,8 @@
 import torch
 import torchtext
 import spacy
+import numpy as np
+import matplotlib.pyplot as plt
 from torchtext.data import get_tokenizer
 from torch.utils.data import random_split
 from torchtext.experimental.datasets import IMDB
@@ -83,6 +85,49 @@ def load_imdb_data(batch_size):
     test_loader = DataLoader(test_set, batch_size=batch_size, collate_fn=pad_trim)
     return train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id
 
+def run_training_epoch(model, criterion, optimizer, train_loader, validation_loader, device):
+    """
+    Run a single training epoch
+    :param model: The model to train
+    :param criterion: The loss function
+    :param optimizer: The optimizer
+    :param train_loader: The data loader
+    :param device: The device to run the training on
+    :return: The average loss for the epoch.
+    """
+    train_ep_loss = 0
+    for (features, labels) in tqdm(train_loader, total=len(train_loader)):
+        model.train()
+        # perform a training iteration
+        features = features.to(device)
+        labels = labels.to(device)
+
+        optimizer.zero_grad()
+        outputs = model(features)
+        loss = criterion(outputs.squeeze(), labels.float())
+        loss.backward()
+        optimizer.step()
+
+        train_ep_loss += loss.item()
+
+    val_ep_loss = 0
+    correct = 0
+    for (features, labels) in tqdm(validation_loader, total=len(validation_loader)):
+        # perform an evaluation
+        with torch.no_grad():
+            features = features.to(device)
+            labels = labels.to(device)
+            outputs = model(features)
+            loss = criterion(outputs.squeeze(), labels.float())
+
+            predicted = (outputs.data > 0).float()
+            correct += (predicted.squeeze() == labels.float()).sum().item()
+            val_ep_loss += loss.item()
+
+    return train_ep_loss / len(train_loader), \
+           val_ep_loss / len(validation_loader), \
+           correct / len(validation_loader.dataset)
+
 ### EXPERIMENTATION CODE ###
 
 # VOCAB AND DATASET HYPERPARAMETERS, DO NOT CHANGE
@@ -94,33 +139,44 @@ SEED = 0
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-#np.random.seed(42)
+np.random.seed(42)
 torch.manual_seed(42)
 
 batch_size = 32
 num_of_blocks = 1
-num_of_epochs = 1
-learning_rate = 0.1
+num_of_epochs = 5
+learning_rate = 0.0001
 
 # Load the IMDB dataset
 train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id = load_imdb_data(batch_size)
 
 model = MyTransformer(vocab=vocab, max_len=MAX_SEQ_LEN, num_of_blocks=num_of_blocks).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-# Using the BCEWithLogitsLoss as the criterion since we require binary classification
+# Using the BCEWithLogitsLoss as the criterion since we require binary classification (positive/negative)
 criterion = torch.nn.BCEWithLogitsLoss()
 
+# Training the model
+train_losses = []
+validation_losses = []
+validation_accuracies = []
 for num_epoch in range(num_of_epochs):
-    model.train()
-    for batch in tqdm(train_loader, desc='Train', total=len(train_loader)):
-        inputs_embeddings, labels = batch
-        inputs_embeddings = inputs_embeddings.to(device)
-        labels = labels.to(device)
+    print(f'Training epoch {num_epoch + 1}...')
+    train_loss, val_loss, val_acc = run_training_epoch(
+        model, criterion, optimizer, train_loader, valid_loader, device)
 
-        optimizer.zero_grad()
-        output = model(inputs_embeddings)
-        loss = criterion(output, labels)
-        loss.backward()
-        optimizer.step()
+    train_losses.append(train_loss)
+    validation_losses.append(val_loss)
+    validation_accuracies.append(val_acc)
 
-    ### YOUR CODE HERE FOR THE SENTIMENT ANALYSIS TASK ###
+# Print the final accuracy
+print(f'Validation Accuracy: {validation_accuracies[-1]}')
+
+# Plot the training and validation losses
+plt.figure()
+plt.plot(train_losses, label='Training loss', color='blue')
+plt.plot(validation_losses, label='Validation loss', color='green')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
