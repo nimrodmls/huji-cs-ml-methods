@@ -306,7 +306,7 @@ def width_of_network_experiment(mlp_width_to_acc):
     colors = ['red', 'blue', 'green', 'orange', 'pink', 'cyan', 'purple']
     fig, ax = plt.subplots()
     for idx, (width, accs) in enumerate(mlp_width_to_acc.items()):
-        ax.scatter([width]*3, accs, label=f'Depth {width}', color=colors[idx])
+        ax.scatter([width]*3, accs, label=f'Width {width}', color=colors[idx])
         for acc, desc in zip(accs, ['train', 'validation', 'test']):
             ax.annotate(f'{desc}', (width, acc))        
     plt.legend()
