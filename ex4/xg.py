@@ -34,7 +34,6 @@ batch_size = 32
 path = 'C:\Temp\whichfaceisreal'
 train_loader, val_loader, test_loader = get_loaders(path, transform, batch_size)
 
-
 # DATA LOADING
 ### DO NOT CHANGE THE CODE BELOW THIS LINE ###
 train_data = []
@@ -54,10 +53,9 @@ with torch.no_grad():
     test_labels = torch.cat(test_labels, 0).cpu().numpy()
 ### DO NOT CHANGE THE CODE ABOVE THIS LINE ###
 
-
+# Use the default XGBoost classifier and fit it to the training data
 classifier = XGBClassifier()
 classifier.fit(train_data, train_labels)
 preds = classifier.predict(test_data)
 accuracy = (preds == test_labels).mean()
 print(f'Accuracy: {accuracy:.2f}')
-

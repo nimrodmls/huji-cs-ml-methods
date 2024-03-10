@@ -9,8 +9,13 @@ from helpers import *
 
 ## Utility functions
 
-
 def create_nn_model(output_dim):
+    """
+    Creating a basic 6 layer MLP with ReLU activations, 
+    with 16 neurons in each hidden layer
+
+    :param output_dim: The number of output neurons
+    """
     model = [nn.Linear(2, 16), nn.ReLU(),  # hidden layer 1
              nn.Linear(16, 16), nn.ReLU(),  # hidden layer 2
              nn.Linear(16, 16), nn.ReLU(),  # hidden layer 3
@@ -22,6 +27,12 @@ def create_nn_model(output_dim):
     return nn.Sequential(*model)
 
 def create_nn_model_batchnorm(output_dim):
+    """
+    Creating a basic 6 layer MLP, batch-normalized, with ReLU activations, 
+    with 16 neurons in each hidden layer
+    
+    :param output_dim: The number of output neurons
+    """
     model = [nn.Linear(2, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 1
              nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 2
              nn.Linear(16, 16), nn.BatchNorm1d(16), nn.ReLU(),  # hidden layer 3
@@ -34,6 +45,12 @@ def create_nn_model_batchnorm(output_dim):
 
 def create_custom_network(depth, width, input_dim, output_dim):
     """
+    Creating a custom MLP with ReLU activations, with a given depth and width
+
+    :param depth: The number of hidden layers. NOT INCLUDING THE INPUT AND OUTPUT LAYERS!!
+    :param width: The number of neurons in each hidden layer
+    :param input_dim: The number of input neurons
+    :param output_dim: The number of output neurons
     """
     model = [nn.Linear(input_dim, width), nn.ReLU()]
     # Adding hidden layers
@@ -45,6 +62,12 @@ def create_custom_network(depth, width, input_dim, output_dim):
 
 def calculate_grad_magnitudes_layer(model, epoch, grad_magnitudes):
     """
+    Calculate the gradient magnitudes for each layer in the model
+
+    :param model: The model to calculate the gradients for
+    :param epoch: The current epoch
+    :param grad_magnitudes: The list to append the gradients to, expecting a list for each epoch, 
+                            with lists for each hidden layer
     """
     # grad_magnitudes has lists as number of epochs, for each epoch the list contains the averge gradient magnitudes for each hidden layer
     layers = list(model)[2:-1][::2]
@@ -54,6 +77,19 @@ def calculate_grad_magnitudes_layer(model, epoch, grad_magnitudes):
             torch.pow(torch.norm(layer.bias.grad), 2)).cpu().numpy())
 
 def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, batch_size=256, callback=None):
+    """
+    Train the model and return the accuracies and losses
+
+    :param train_data: The training data
+    :param val_data: The validation data
+    :param test_data: The test data
+    :param model: The model to train
+    :param lr: The learning rate
+    :param epochs: The number of epochs
+    :param batch_size: The batch size
+    :param callback: A callback function to run after each epoch
+    :return: The trained model, the train, validation, and test accuracies, followed by the train, validation, and test losses
+    """
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
     print('Using device:', device)
@@ -77,6 +113,7 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
     test_losses = []
 
     for ep in range(epochs):
+        # TRAINING
         model.train()
         pred_correct = 0
         ep_loss = 0.
@@ -99,6 +136,7 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
         train_accs.append(pred_correct / len(trainset))
         train_losses.append(ep_loss / len(trainloader))
 
+        # EVALUATION
         model.eval()
         with torch.no_grad():
             for loader, accs, losses in zip([valloader, testloader], [val_accs, test_accs], [val_losses, test_losses]):
@@ -106,7 +144,6 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
                 total = 0
                 ep_loss = 0.
                 for inputs, labels in loader:
-                    # perform an evaluation iteration
                     inputs = inputs.to(device)
                     labels = labels.to(device)
                     outputs = model(inputs)
@@ -128,6 +165,10 @@ def train_model(train_data, val_data, test_data, model, lr=0.001, epochs=50, bat
 
 def base_nn_multi_lr_experiment(isBatchnorm=False):
     """
+    Basic NN with multiple learning rates experiment
+    Plots the validation losses for different learning rates
+
+    :param isBatchnorm: Whether to use batchnorm in the model
     """
     lr_to_color = {1: 'red', 0.01: 'blue', 0.001: 'green', 0.00001: 'orange'}
 
@@ -162,11 +203,14 @@ def base_nn_multi_lr_experiment(isBatchnorm=False):
     plt.ylabel('Loss')
     plt.title(f'Losses per Epoch - Validation Set - Batchnorm: {isBatchnorm}')
     plt.legend()
-    plt.savefig(f'multi_lr_loss_per_epoch_bn_{isBatchnorm}.pdf')
-    #plt.show()
+    plt.show()
 
 def base_nn_epoch_sampling_experiment(isBatchnorm=False):
     """
+    Basic NN with different epoch sampling experiment
+    Plots the validation losses for different epoch samplings
+
+    :param isBatchnorm: Whether to use batchnorm in the model
     """
     train_data = pd.read_csv('train.csv')
     val_data = pd.read_csv('validation.csv')
@@ -201,17 +245,19 @@ def base_nn_epoch_sampling_experiment(isBatchnorm=False):
     plt.xticks(epoch_samples)
     plt.ylabel('Loss')
     plt.title(f'Losses per Epoch, Sampling - Validation Set, LR {lr}, Batchnorm: {isBatchnorm}')
-    plt.savefig(f'epoch_sampling_loss_per_epoch_bn_{isBatchnorm}.pdf')
-    #plt.show()
+    plt.show()
     
 def batchnorm_nn_experiment():
     """
+    Basic NN with batchnorm, for both basic experiments
     """
     base_nn_multi_lr_experiment(isBatchnorm=True)
     base_nn_epoch_sampling_experiment(isBatchnorm=True)
 
 def base_nn_batchsize_experiment():
     """
+    Basic NN with different batch sizes experiment
+    Plots the validation losses for different batch sizes on the same plot
     """
     train_data = pd.read_csv('train.csv')
     val_data = pd.read_csv('validation.csv')
@@ -260,8 +306,7 @@ def base_nn_batchsize_experiment():
     plt.ylabel('Loss')
     plt.title(f'Losses per Epoch - Test Set, pairs of (batchsize, epochs)')
     plt.legend()
-    plt.savefig('batchsize_loss_per_epoch.pdf')
-    #plt.show()
+    plt.show()
 
     plt.figure()
     for idx, test_accs in enumerate(all_test_accs):
@@ -278,11 +323,12 @@ def base_nn_batchsize_experiment():
     plt.ylabel('Accuracy')
     plt.title(f'Accuracy per Epoch - Test Set, pairs of (batchsize, epochs)')
     plt.legend()
-    plt.savefig('batchsize_acc_per_epoch.pdf')
-    #plt.show()
+    plt.show()
 
 def depth_of_network_experiment(mlp_depth_to_acc):
     """
+    Plot the accuracy per depth of different networks with the same width
+
     :param mlp_depth_to_acc: A dictionary with the depth of the network as 
                              keys and the accuracies (train, validation, test) as values
     """
@@ -300,6 +346,8 @@ def depth_of_network_experiment(mlp_depth_to_acc):
 
 def width_of_network_experiment(mlp_width_to_acc):
     """
+    Plot the accuracy per width of different networks with the same depth
+
     :param mlp_width_to_acc: A dictionary with the width of the network as 
                              keys and the accuracies (train, validation, test) as values
     """
@@ -317,6 +365,7 @@ def width_of_network_experiment(mlp_width_to_acc):
 
 def varied_model_parameters_experiment():
     """
+    Varied model parameters experiment
     """
     train_data = pd.read_csv('train.csv')
     val_data = pd.read_csv('validation.csv')
@@ -325,6 +374,9 @@ def varied_model_parameters_experiment():
     input_dim = 2
     output_dim = len(train_data['country'].unique())
     # Tuples of (depth, width, epochs, batch_size, lr, plot_color)
+    # These were tested separately and deemed sufficiently performing 
+    # according to their validation accuracy
+    # Eventually only 2 will be selected as the best and worst models
     models_base_params = [
         (1, 16, 50, 128, 0.001, 'blue'),
         (2, 16, 50, 128, 0.001, 'orange'),
@@ -395,7 +447,6 @@ def varied_model_parameters_experiment():
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title(f'Loss per Epoch - Best Model ({best_model_params[0]},{best_model_params[1]})')
-    #plt.savefig('best_varied_val_loss_per_epoch.pdf')
     plt.show()
 
     # Q6.2.1.2 - Worst model
@@ -416,7 +467,6 @@ def varied_model_parameters_experiment():
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.title(f'Loss per Epoch - Worst Model ({worst_model_params[0]},{worst_model_params[1]})')
-    #plt.savefig('worst_varied_val_loss_per_epoch.pdf')
     plt.show()
 
     # Q6.2.1.3 - Depth of network experiment
@@ -438,6 +488,8 @@ def varied_model_parameters_experiment():
 
 def monitoring_gradients_experiment():
     """
+    Monitoring gradients experiment
+    Plots the average gradient magnitude per epoch for different layers
     """
     epochs = 10
     hidden_layers = 100

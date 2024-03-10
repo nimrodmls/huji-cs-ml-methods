@@ -151,6 +151,9 @@ def run_for_model(lr, model):
 
 def baselines_experiment():
     """
+    Run the experiment for the baselines on different learning rates
+    Plots the test accuracy for each model and learning rate 
+    and selecting the best and worst baselines
     """
     models = [('Linear Probing', 'blue'), ('Fine-tuning', 'green'), ('From Scratch', 'red')]
     learning_rates = [0.00001, 0.0001, 0.001, 0.01, 0.1]
