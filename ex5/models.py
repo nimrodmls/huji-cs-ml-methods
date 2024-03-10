@@ -8,16 +8,35 @@ class MySelfAttention(nn.Module):
     """
     def __init__(self, input_dim):
         """
-        :param input_dim: The feature dimension the input tokens (d).
+        :param input_dim: The embedding (feature) dimension the input tokens (d).
         """
         super(MySelfAttention, self).__init__()
         self.input_dim = input_dim
-        ### YOUR CODE HERE ###
-        pass
+        # The linear layers for the query, key and value matrices.
+        # These are of dimensions d x d.
+        self.w_query = nn.Linear(self.input_dim, self.input_dim)
+        self.w_key = nn.Linear(self.input_dim, self.input_dim)
+        self.w_value = nn.Linear(self.input_dim, self.input_dim)
 
     def forward(self, x):
-        ### YOUR CODE HERE ###
-        pass
+        """
+        :param x: The input tensor of shape (B, T, d).
+                  Where T is the number of tokens and d is the 
+                  embedding (feature) dimension of each token,
+                  and B is the batch size.
+        """
+        # Computing the Q, K, V matrices by the corresponding linear layers to the input
+        q = self.w_query(x)
+        k = self.w_key(x)
+        v = self.w_value(x)
+
+        # Transpose each matrix in K, the number of matrices depend on the batch size
+        # done along the axis 1 and 2: (T, d) -> (d, T)
+        k_t = torch.transpose(k, 1, 2)
+
+        # Normalizing and computing the attention score
+        normalized = F.softmax(torch.bmm(q, k_t) / torch.sqrt(self.input_dim))
+        return torch.bmm(normalized, v)
 
 class MyLayerNorm(nn.Module):
     """
@@ -30,10 +49,18 @@ class MyLayerNorm(nn.Module):
         super(MyLayerNorm, self).__init__()
         self.gamma = nn.Parameter(torch.ones(*input_dim))
         self.beta = nn.Parameter(torch.zeros(*input_dim))
+        self.eps = 1e-8
 
     def forward(self, x):
-        ### YOUR CODE HERE ###
-        pass
+        """
+        :param x: The input tensor of shape (T, d).
+        """
+        # Compute the mean and variance for every element in the batch
+        mean = x.mean(dim=(1, 2), keepdim=True)
+        # Not taking regard of the correction, computing the variance as 
+        # described in the assignment
+        variance = x.var(dim=(1, 2), correction=0, keepdim=True)
+        return (self.gamma * ((x - mean) / torch.sqrt(variance + self.eps))) + self.beta
 
 class MyTransformerBlock(nn.Module):
     """

@@ -50,7 +50,7 @@ def split_train_val(train_set):
                                         generator=generator)
     return train_set, valid_set
 
-def load_imdb_data():
+def load_imdb_data(batch_size):
     """
     This function loads the IMDB dataset and creates train, validation and test sets.
     It should take around 15-20 minutes to run on the first time (it downloads the GloVe embeddings, IMDB dataset and extracts the vocab).
@@ -83,7 +83,8 @@ def load_imdb_data():
     test_loader = DataLoader(test_set, batch_size=batch_size, collate_fn=pad_trim)
     return train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+### EXPERIMENTATION CODE ###
+
 # VOCAB AND DATASET HYPERPARAMETERS, DO NOT CHANGE
 MAX_VOCAB_SIZE = 25000 # Maximum number of words in the vocabulary
 MIN_FREQ = 10 # We include only words which occur in the corpus with some minimal frequency
@@ -91,21 +92,35 @@ MAX_SEQ_LEN = 500 # We trim/pad each sentence to this number of words
 SPLIT_RATIO = 0.8 # Split ratio between train and validation set
 SEED = 0
 
-# YOUR HYPERPARAMETERS
-### YOUR CODE HERE ###
-# batch_size = 32
-# num_of_blocks =
-# num_of_epochs =
-# learning_rate =
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+#np.random.seed(42)
+torch.manual_seed(42)
+
+batch_size = 32
+num_of_blocks = 1
+num_of_epochs = 1
+learning_rate = 0.1
 
 # Load the IMDB dataset
-train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id = load_imdb_data()
+train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id = load_imdb_data(batch_size)
 
 model = MyTransformer(vocab=vocab, max_len=MAX_SEQ_LEN, num_of_blocks=num_of_blocks).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+# Using the BCEWithLogitsLoss as the criterion since we require binary classification
+criterion = torch.nn.BCEWithLogitsLoss()
 
-### EXAMPLE CODE FOR RUNNING THE DATALOADER.
-# for batch in tqdm(train_loader, desc='Train', total=len(train_loader)):
-#     inputs_embeddings, labels = batch
+for num_epoch in range(num_of_epochs):
+    model.train()
+    for batch in tqdm(train_loader, desc='Train', total=len(train_loader)):
+        inputs_embeddings, labels = batch
+        inputs_embeddings = inputs_embeddings.to(device)
+        labels = labels.to(device)
 
-### YOUR CODE HERE FOR THE SENTIMENT ANALYSIS TASK ###
+        optimizer.zero_grad()
+        output = model(inputs_embeddings)
+        loss = criterion(output, labels)
+        loss.backward()
+        optimizer.step()
+
+    ### YOUR CODE HERE FOR THE SENTIMENT ANALYSIS TASK ###
