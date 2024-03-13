@@ -87,7 +87,9 @@ def load_imdb_data(batch_size):
 
 def run_training_epoch(model, criterion, optimizer, train_loader, validation_loader, device):
     """
-    Run a single training epoch
+    Run a single training epoch, recording loss and accuracy for both training and validation sets.
+    Iterations on the validation set are evaluation only, no backpropagation is performed.
+
     :param model: The model to train
     :param criterion: The loss function
     :param optimizer: The optimizer
@@ -168,13 +170,14 @@ for num_epoch in range(num_of_epochs):
     validation_losses.append(val_loss)
     validation_accuracies.append(val_acc)
 
-# Print the final accuracy
+# Print the final accuracy - on the validation set
 print(f'Validation Accuracy: {validation_accuracies[-1]}')
 
 # Plot the training and validation losses
 plt.figure()
 plt.plot(train_losses, label='Training loss', color='blue')
 plt.plot(validation_losses, label='Validation loss', color='green')
+plt.title('Transformer Training and Validation Loss per Epoch')
 plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()

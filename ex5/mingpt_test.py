@@ -6,13 +6,14 @@ from mingpt.bpe import BPETokenizer
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def generate(model, prompt='', num_samples=10, steps=20, do_sample=True):
+    """
+    Generate text from the model given a prompt.
+    This code was mostly taken from the demo of the mingpt library.
+    """
         
     # tokenize the input prompt into integer input sequence
     tokenizer = BPETokenizer()
     if prompt == '':
-        # to create unconditional samples...
-        # manually create a tensor with only the special <|endoftext|> token
-        # similar to what openai's code does here https://github.com/openai/gpt-2/blob/master/src/generate_unconditional_samples.py
         x = torch.tensor([[tokenizer.encoder.encoder['<|endoftext|>']]], dtype=torch.long)
     else:
         x = tokenizer(prompt).to(device)
@@ -29,6 +30,9 @@ def generate(model, prompt='', num_samples=10, steps=20, do_sample=True):
         print(out)
     
 def main():
+    """
+    Generating text from 2-word prefixes using GPT-2 model.
+    """
     torch.manual_seed(42)
 
     model_type = 'gpt2'
@@ -38,18 +42,18 @@ def main():
     model.to(device)
     model.eval()
 
-    print(generate(model, prompt='Life means', num_samples=10, steps=20))
-
-    # generate some samples
-    # for prefix in ['Life means',
-    #                'Machine learning',
-    #                'My name',
-    #                'Rock is',
-    #                'Love requires',
-    #                'Forgiveness is',
-    #                'Space travel',
-    #                '']:
-    #     generate(model, num_samples=5, steps=20)
+    for prefix in ['Life means',
+                   'Machine learning',
+                   'My name',
+                   'Rock is',
+                   'Love requires',
+                   'Forgiveness is',
+                   'Space travel',
+                   'Gradient Descent',
+                   'Grandiose plans',
+                   'Desperate times']:
+        print(f"\n>> Prompt Prefix: {prefix}\n")
+        generate(model, prefix, num_samples=5, steps=20)
 
 if __name__ == '__main__':
     main()
