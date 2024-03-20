@@ -160,3 +160,7 @@ cython_debug/
 #.idea/
 
 ex3/Pytorch_Tutorial.ipynb
+
+# EX5 - minGPT ignores and more
+.data
+.vector_cache
