@@ -4,7 +4,8 @@ import torch.nn.functional as F
 
 class MySelfAttention(nn.Module):
     """
-    Self attention layer
+    Self attention layer - Allowing the model to understand the relationships between tokens.
+    (i.e. words in a sentence)
     """
     def __init__(self, input_dim):
         """
@@ -13,7 +14,7 @@ class MySelfAttention(nn.Module):
         super(MySelfAttention, self).__init__()
         self.input_dim = input_dim
         # The linear layers for the query, key and value matrices.
-        # These are of dimensions d x d.
+        # These are of dimensions (d, d). These are learnable parameters.
         self.w_query = nn.Linear(self.input_dim, self.input_dim)
         self.w_key = nn.Linear(self.input_dim, self.input_dim)
         self.w_value = nn.Linear(self.input_dim, self.input_dim)
@@ -34,7 +35,8 @@ class MySelfAttention(nn.Module):
         # done along the axis 1 and 2: (T, d) -> (d, T)
         k_t = torch.transpose(k, 1, 2)
 
-        # Normalizing and computing the attention score
+        # Normalizing and computing the attention score, aka similarity
+        # Scaling is done to mitigate the magnitude of the result
         normalized = torch.softmax(torch.bmm(q, k_t) / torch.sqrt(torch.tensor(self.input_dim)), dim=-1)
         return torch.bmm(normalized, v)
 
@@ -57,10 +59,9 @@ class MyLayerNorm(nn.Module):
         """
         # Compute the mean and variance for every element in the batch
         mean = x.mean(dim=(1, 2), keepdim=True)
-        # Not taking regard of the correction, computing the variance as `
+        # Not taking regard of the correction, computing the variance as
         # described in the assignment
         variance = x.var(dim=(1, 2), correction=0, keepdim=True)
-        #variance2 = ((x - mean) ** 2).mean(dim=(1,2), keepdim=True)
         return (self.gamma * ((x - mean) / torch.sqrt(variance + self.eps))) + self.beta
 
 class MyTransformerBlock(nn.Module):

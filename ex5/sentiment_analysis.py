@@ -104,10 +104,13 @@ def run_training_epoch(model, criterion, optimizer, train_loader, validation_loa
         features = features.to(device)
         labels = labels.to(device)
 
+        # Zeroing gradients
         optimizer.zero_grad()
         outputs = model(features)
         loss = criterion(outputs.squeeze(), labels.float())
+        # Updating parameters, backprop
         loss.backward()
+        # Perform the optimization step
         optimizer.step()
 
         train_ep_loss += loss.item()
@@ -120,6 +123,7 @@ def run_training_epoch(model, criterion, optimizer, train_loader, validation_loa
             features = features.to(device)
             labels = labels.to(device)
             outputs = model(features)
+            # Only calculating the loss, no backprop during evaluation
             loss = criterion(outputs.squeeze(), labels.float())
 
             predicted = (outputs.data > 0).float()
@@ -152,6 +156,7 @@ learning_rate = 0.0001
 # Load the IMDB dataset
 train_set, valid_set, test_set, train_loader, valid_loader, test_loader, vocab, pad_id = load_imdb_data(batch_size)
 
+# Creating the model with the given vocabulary embeddings
 model = MyTransformer(vocab=vocab, max_len=MAX_SEQ_LEN, num_of_blocks=num_of_blocks).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 # Using the BCEWithLogitsLoss as the criterion since we require binary classification (positive/negative)
